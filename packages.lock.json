@@ -1,0 +1,75 @@
+{
+  "format": 1,
+  "sources": [
+    "https://elpa.gnu.org/packages/",
+    "https://elpa.nongnu.org/nongnu/"
+  ],
+  "packages": [
+    {
+      "name": "compat",
+      "version": "31.1.0.0",
+      "url": "https://elpa.gnu.org/packages/compat-31.1.0.0.tar",
+      "sha256": "d0b21a401990575b0fed84f5e692440c3e16aaa8e679172e38ee131b88ecff9c"
+    },
+    {
+      "name": "cond-let",
+      "version": "1.1.5",
+      "url": "https://elpa.nongnu.org/nongnu/cond-let-1.1.5.tar",
+      "sha256": "cb12ebffaab37fc12d60a3d749d304f67012a6580750f260b013b124bfb592e6"
+    },
+    {
+      "name": "llama",
+      "version": "1.0.6",
+      "url": "https://elpa.nongnu.org/nongnu/llama-1.0.6.tar",
+      "sha256": "eafea6f32985ebf2c0266cdeff3a7b72eaf674c7a51e1c424fbc0e4166310337"
+    },
+    {
+      "name": "seq",
+      "version": "2.24",
+      "url": "https://elpa.gnu.org/packages/seq-2.24.tar",
+      "sha256": "8693439fd9bc447345aa6e1b5a4121107a474c4e7de5a511bbd2b8586aa0a88f"
+    },
+    {
+      "name": "magit-section",
+      "version": "4.7.1",
+      "url": "https://elpa.nongnu.org/nongnu/magit-section-4.7.1.tar",
+      "sha256": "65427cfa50393325fcc5876da0bf1fa95ea170b71046e5523a19a2255f6458bf"
+    },
+    {
+      "name": "transient",
+      "version": "0.13.8",
+      "url": "https://elpa.gnu.org/packages/transient-0.13.8.tar",
+      "sha256": "0fa2ee5ce7ce2fd35acd9cf86e9b2d1abec99973db8378b386b5f90b1fa1bebd"
+    },
+    {
+      "name": "with-editor",
+      "version": "3.5.4",
+      "url": "https://elpa.nongnu.org/nongnu/with-editor-3.5.4.tar",
+      "sha256": "6dd3156efcec9be9ee2e47881c26aceb35858508c203341cc6d10f51b1637f26"
+    },
+    {
+      "name": "magit",
+      "version": "4.7.1",
+      "url": "https://elpa.nongnu.org/nongnu/magit-4.7.1.tar",
+      "sha256": "b2d38a34aeddea92cc87b4cb9823dcd597993f800633c760587dba083acff2e5"
+    },
+    {
+      "name": "clojure-mode",
+      "version": "5.23.0",
+      "url": "https://elpa.nongnu.org/nongnu/clojure-mode-5.23.0.tar",
+      "sha256": "af8365d2a56b022a953b814315b4cc5256e906d37185f7010b78691aaeee96d0"
+    },
+    {
+      "name": "tuareg",
+      "version": "3.1.0",
+      "url": "https://elpa.nongnu.org/nongnu/tuareg-3.1.0.tar",
+      "sha256": "5527c6558716e25587264f9b6a7c0b9b636fb0d74d0e6f6076f9b79a07091cba"
+    },
+    {
+      "name": "rainbow-delimiters",
+      "version": "2.1.5",
+      "url": "https://elpa.nongnu.org/nongnu/rainbow-delimiters-2.1.5.tar",
+      "sha256": "825b0858913b1a82d7b605f62c9137bb1313b1394de81bd31d13972fd2879f38"
+    }
+  ]
+}

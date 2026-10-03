@@ -1,0 +1,6 @@
+/.local/
+/docs/test-reports/
+*.elc
+*.eln
+*~
+.DS_Store

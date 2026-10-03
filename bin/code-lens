@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+lens_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+export CODE_LENS_ROOT="$lens_root"
+if [ -n "${CODE_LENS_EMACS:-}" ]; then
+    lens_emacs=$CODE_LENS_EMACS
+elif command -v emacs >/dev/null 2>&1; then
+    lens_emacs=$(command -v emacs)
+elif [ -x '/Applications/Emacs 2.app/Contents/MacOS/Emacs' ]; then
+    lens_emacs='/Applications/Emacs 2.app/Contents/MacOS/Emacs'
+elif [ -x '/Applications/Emacs.app/Contents/MacOS/Emacs' ]; then
+    lens_emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
+else
+    echo 'Emacs 29.1+ required; set CODE_LENS_EMACS to its executable.' >&2
+    exit 1
+fi
+exec "$lens_emacs" -Q --load "$lens_root/early-init.el" --load "$lens_root/init.el" "$@"
