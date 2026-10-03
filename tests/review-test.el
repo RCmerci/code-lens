@@ -10,9 +10,10 @@
                         (file-name-directory (or load-file-name buffer-file-name)))))
 (defmacro lens-test-project (&rest body)
   "Run BODY in a disposable Git project with both review languages."
-  `(let* ((directory (make-temp-file "lens-project-" t))
+  `(let* ((directory (file-truename (make-temp-file "lens-project-" t)))
           (default-directory (file-name-as-directory directory))
           (project-list-file (expand-file-name "projects" directory))
+          (lens-eglot-auto-start nil)
           (clj (expand-file-name "review.clj" directory))
           (ml (expand-file-name "review.ml" directory)))
      (unwind-protect
@@ -139,7 +140,7 @@
      (should (string-match-p "review.ml" (magit-git-string "diff" "--cached" "--name-only")))
      (should (equal head (magit-git-string "rev-parse" "HEAD"))))))
 
-(ert-deftest lens-no-automatic-eglot-or-formatting ()
+(ert-deftest lens-reading-with-auto-eglot-disabled-no-formatting ()
   (lens-test-project
    (with-current-buffer (find-file-noselect ml)
      (should (eq (key-binding (kbd "C-c r s")) 'lens-semantic-navigation))

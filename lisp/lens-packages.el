@@ -10,7 +10,8 @@
     (consult "搜索、索引和 xref 候选预览")
     (vertico "纵向 minibuffer 候选界面")
     (orderless "多词任意顺序匹配")
-    (marginalia "候选说明与文件信息"))
+    (marginalia "候选说明与文件信息")
+    (modus-themes "modus-operandi-tinted 浅色主题"))
   "Primary third-party features; builtin packages and support dependencies are omitted.")
 
 (defun lens-primary-package-summary ()

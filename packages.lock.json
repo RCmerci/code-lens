@@ -94,6 +94,12 @@
       "version": "2.13",
       "url": "https://elpa.gnu.org/packages/marginalia-2.13.tar",
       "sha256": "e1b228d1d4aa4648982aa79ebb9a2e1d2824b7cd40e01d39ed541f1b7663edba"
+    },
+    {
+      "name": "modus-themes",
+      "version": "5.3.0",
+      "url": "https://elpa.gnu.org/packages/modus-themes-5.3.0.tar",
+      "sha256": "bd1a6c34ebcd0d8d69ce669156006bd0d099281f6bd299db095ee0ee9a0da610"
     }
   ]
 }

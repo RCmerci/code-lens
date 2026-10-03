@@ -11,6 +11,8 @@
 (require 'vertico)
 (require 'orderless)
 (require 'marginalia)
+(require 'lens-lsp)
+(require 'lens-source-reading)
 
 ;; One standard completion UI, with live navigation previews and rich annotations.
 (setq read-process-output-max (* 1024 1024)
@@ -31,7 +33,10 @@
 (menu-bar-mode 1)
 (when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
 (when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-(load-theme 'modus-vivendi t)
+(require 'modus-themes)
+(mapc #'disable-theme custom-enabled-themes)
+(load-theme 'modus-operandi-tinted t)
+(setq use-short-answers t)
 (show-paren-mode 1)
 (column-number-mode 1)
 (size-indication-mode 1)
@@ -53,7 +58,8 @@
 (define-minor-mode lens-reading-mode
   "Keep source buffers read-only until explicitly unlocked with C-c r e."
   :lighter " Lens"
-  (read-only-mode (if lens-reading-mode 1 -1)))
+  (read-only-mode (if lens-reading-mode 1 -1))
+  (lens-sync-source-reading-keys))
 
 (defun lens-source-setup ()
   "Improve source legibility without edit or format hooks."
@@ -122,23 +128,6 @@
       (xref-push-marker-stack)
       (goto-char (cdr entry))
       (when (get-buffer-window (current-buffer)) (recenter)))))
-
-(defun lens-semantic-navigation ()
-  "Explicitly start an existing language server for this project's navigation."
-  (interactive)
-  (let ((server (cond ((derived-mode-p 'clojure-mode) "clojure-lsp")
-                      ((derived-mode-p 'tuareg-mode) "ocamllsp")
-                      (t (user-error "Semantic navigation supports Clojure and OCaml")))))
-    (unless (executable-find server)
-      (user-error "%s is absent from this session's PATH; text search and imenu still work" server))
-    (require 'eglot)
-    (setq-local eglot-ignored-server-capabilities
-                '(:documentFormattingProvider :documentRangeFormattingProvider
-                  :documentOnTypeFormattingProvider :codeActionProvider :renameProvider))
-    (setq-local eglot-stay-out-of '(flymake company yasnippet))
-    (let ((eglot-server-programs `((clojure-mode . ("clojure-lsp"))
-                                    (tuareg-mode . ("ocamllsp")))))
-      (call-interactively #'eglot))))
 
 ;; Magit owns its maps and write operations. No stage/checkout/commit runs on startup.
 (with-eval-after-load 'magit

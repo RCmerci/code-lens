@@ -6,6 +6,7 @@
   '(("项目与搜索"
      ("C-c r p" project-switch-project "切换项目")
      ("C-c r f" project-find-file "查找项目文件")
+     ("C-c j" consult-ripgrep "Consult ripgrep 项目搜索")
      ("C-c r /" lens-consult-search "Consult 项目搜索预览；优先 rg，无 rg 时用 grep")
      ("C-c r G" lens-search "传统 grep 结果列表；M-g n / p 移动命中")
      ("C-s" consult-line "当前文件行搜索与预览；RET 跳转，C-g 取消")
@@ -15,12 +16,12 @@
     ("定义与结构导航"
      ("C-c r i" consult-imenu "当前文件定义索引与预览")
      ("C-c r I" consult-imenu-multi "同项目、同语言已打开 buffer 的定义索引")
-     ("C-c r ." lens-definition "定义：默认当前文件文本索引；连接 LSP 后用语义后端")
+     ("C-c r ." lens-definition "定义：Eglot 语义跳转；连接前回退当前文件索引")
      ("M-." lens-definition "定义跳转，同 C-c r .")
      ("C-c r ," xref-go-back "返回定义跳转前的位置")
      ("M-," xref-go-back "返回，同 C-c r ,")
      ("C-c r r" xref-find-references "引用；结果准确性取决于 xref 后端")
-     ("C-c r s" lens-semantic-navigation "手动连接已有 clojure-lsp / ocamllsp"))
+     ("C-c r s" lens-semantic-navigation "连接 / 重试已有 clojure-lsp / ocamllsp"))
     ("Git review"
      ("C-c r g" magit-status "仓库状态")
      ("C-x g" magit-status "仓库状态，同 C-c r g")
@@ -81,20 +82,23 @@
    "C-c r 是阅读前缀：先按 C-c，再按 r，最后按所列的键。\n"
    "方括号内是实际 keymap 中的命令名；M-x 也可调用。\n\n"
    (lens-primary-package-summary)
+   "  内置 Eglot：Clojure / OCaml 文件自动连接语言服务器，提供定义、引用与符号说明。\n"
+   "  主题 modus-operandi-tinted；确认问题使用 y / n。\n\n"
+   (lens-source-reading-help-text)
    "\n补全与预览\n"
    "  Vertico：C-n / C-p 选择候选，RET 确认，C-g 取消。\n"
    "  Orderless：用空格分隔多个词，顺序不限；Marginalia 在候选旁显示说明。\n"
    "  Consult 搜索：#搜索表达式#结果过滤；输入后异步搜索，可预览跳转。\n"
-   "  预览会打开相关文件；代码仍默认只读，不自动启动语言服务器。\n\n"
+   "  预览会打开相关文件；代码仍默认只读，相关语言 buffer 自动连接 Eglot。\n\n"
    "启动\n"
    "  cd ~/gh-repos/code-lens\n"
    "  ./bin/code-lens        GUI；./bin/code-lens -nw        终端\n"
    "  ./bin/code-lens <项目目录或代码文件>\n\n"
    "阅读约定\n"
    "  代码默认只读。C-c r e / C-x C-q 只解锁当前 buffer，显式保存才写盘。\n"
-   "  默认不启动 REPL / LSP，不自动格式化；Clojure / OCaml 都可直接阅读。\n"
+   "  Clojure / OCaml 文件默认自动连接 Eglot；不启动 REPL、不自动格式化。\n"
    "  未连接 LSP 时，定义跳转只用当前文件文本索引，不解析类型或命名空间。\n"
-   "  跨文件精确语义导航：C-c r s 手动连接已有 clojure-lsp / ocamllsp。\n"
+   "  跨文件精确语义导航：C-c r s 连接 / 重试已有 clojure-lsp / ocamllsp。\n"
    "  OCaml 使用目标项目已有 opam switch 的环境；不创建 switch 或运行构建。\n"
    "  LSP 可索引、下载项目依赖或写缓存；M-x eglot-shutdown 可断开。\n"
    "  没有 LSP 时，用项目搜索查跨文件定义；引用结果不能当作完整语义关系。\n\n"
