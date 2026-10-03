@@ -7,14 +7,22 @@
 (require 'clojure-mode)
 (require 'tuareg)
 (require 'rainbow-delimiters)
+(require 'consult)
+(require 'vertico)
+(require 'orderless)
+(require 'marginalia)
 
-;; Built-in UI and completion are sufficient for picking files and symbols.
+;; One standard completion UI, with live navigation previews and rich annotations.
 (setq read-process-output-max (* 1024 1024)
       scroll-conservatively 101
       scroll-margin 4
       compilation-scroll-output nil
-      completion-styles '(flex basic)
-      completion-category-overrides '((file (styles partial-completion)))
+      completion-styles '(orderless basic)
+      completion-category-defaults nil
+      completion-category-overrides '((file (styles partial-completion orderless)))
+      consult-preview-key '(:debounce 0.2 any)
+      xref-show-xrefs-function #'consult-xref
+      xref-show-definitions-function #'consult-xref
       tab-always-indent nil
       sentence-end-double-space nil
       ring-bell-function #'ignore
@@ -28,7 +36,11 @@
 (column-number-mode 1)
 (size-indication-mode 1)
 (winner-mode 1)
-(fido-vertical-mode 1)
+(fido-vertical-mode -1)
+(fido-mode -1)
+(icomplete-mode -1)
+(vertico-mode 1)
+(marginalia-mode 1)
 (save-place-mode 1)
 (savehist-mode 1)
 (recentf-mode 1)
@@ -69,6 +81,13 @@
 
 (dolist (hook '(clojure-mode-hook clojurescript-mode-hook clojurec-mode-hook emacs-lisp-mode-hook))
   (add-hook hook #'rainbow-delimiters-mode))
+
+(defun lens-consult-search (&optional directory initial)
+  "Search DIRECTORY with Consult previews, using ripgrep or the grep fallback."
+  (interactive "P")
+  (if (executable-find "rg")
+      (consult-ripgrep directory initial)
+    (consult-grep directory initial)))
 
 (defun lens-search (regexp)
   "Search project text for REGEXP with ripgrep; results are navigable hits."

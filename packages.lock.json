@@ -70,6 +70,30 @@
       "version": "2.1.5",
       "url": "https://elpa.nongnu.org/nongnu/rainbow-delimiters-2.1.5.tar",
       "sha256": "825b0858913b1a82d7b605f62c9137bb1313b1394de81bd31d13972fd2879f38"
+    },
+    {
+      "name": "consult",
+      "version": "3.10",
+      "url": "https://elpa.gnu.org/packages/consult-3.10.tar",
+      "sha256": "68aa5daeb701958482dccab3b23a454ff9a9be6b2f4c41fbcc7a353ecfeab096"
+    },
+    {
+      "name": "vertico",
+      "version": "2.15",
+      "url": "https://elpa.gnu.org/packages/vertico-2.15.tar",
+      "sha256": "5c3492edb1e0020da711d9a4213a3878e90e7af8e2e6375757901f4b399872ff"
+    },
+    {
+      "name": "orderless",
+      "version": "1.8",
+      "url": "https://elpa.gnu.org/packages/orderless-1.8.tar",
+      "sha256": "9b4b1253bab2e1d984ad0a31028716d0eff2cd358144bb9caced3b15088e69aa"
+    },
+    {
+      "name": "marginalia",
+      "version": "2.13",
+      "url": "https://elpa.gnu.org/packages/marginalia-2.13.tar",
+      "sha256": "e1b228d1d4aa4648982aa79ebb9a2e1d2824b7cd40e01d39ed541f1b7663edba"
     }
   ]
 }

@@ -1,14 +1,19 @@
 ;;; lens-help.el --- Code Lens bindings and startup reference -*- lexical-binding: t; -*-
 (require 'subr-x)
+(require 'lens-packages)
 
 (defconst lens-shortcut-groups
   '(("项目与搜索"
      ("C-c r p" project-switch-project "切换项目")
      ("C-c r f" project-find-file "查找项目文件")
-     ("C-c r /" lens-search "项目文本搜索；有 rg 时使用 ripgrep")
+     ("C-c r /" lens-consult-search "Consult 项目搜索预览；优先 rg，无 rg 时用 grep")
+     ("C-c r G" lens-search "传统 grep 结果列表；M-g n / p 移动命中")
+     ("C-c r L" consult-line "当前文件行搜索与预览；C-s 仍为增量搜索")
+     ("C-x b" consult-buffer "切换 buffer / 最近文件 / 书签，可预览")
      ("C-c r o" occur "列出当前文件匹配行"))
     ("定义与结构导航"
-     ("C-c r i" imenu "当前文件定义索引")
+     ("C-c r i" consult-imenu "当前文件定义索引与预览")
+     ("C-c r I" consult-imenu-multi "同项目、同语言已打开 buffer 的定义索引")
      ("C-c r ." lens-definition "定义：默认当前文件文本索引；连接 LSP 后用语义后端")
      ("M-." lens-definition "定义跳转，同 C-c r .")
      ("C-c r ," xref-go-back "返回定义跳转前的位置")
@@ -61,25 +66,6 @@
     ("C-h k" "查看某键用途") ("C-h b" "查看当前 buffer 全部绑定"))
   "Existing Emacs commands worth showing alongside the custom bindings.")
 
-(defconst lens-magit-help-groups
-  '(("Magit status / diff：菜单与 section" magit-status-mode-map
-     ("n" "下一 section / 文件 / hunk") ("p" "上一 section / 文件 / hunk")
-     ("M-n" "下一同级 section") ("M-p" "上一同级 section")
-     ("TAB" "展开 / 折叠 section") ("RET" "打开当前位置对应的文件 / 提交")
-     ("SPC" "显示 / 向下滚动关联 diff")
-     ("DEL" "显示 / 向上滚动关联 diff")
-     ("l" "历史菜单；再按 l 查看当前分支历史")
-     ("d" "diff 菜单；跨分支可用 M-x magit-diff-range")
-     ("s" "stage（会修改 Git index）") ("u" "unstage（会修改 Git index）")
-     ("c" "commit 菜单（可创建提交）")
-     ("?" "Magit 操作菜单") ("q" "退出当前 Magit buffer"))
-    ("Magit diff：滚动当前差异" magit-diff-mode-map
-     ("SPC" "向下滚动当前 diff") ("DEL" "向上滚动当前 diff"))
-    ("Magit blame：逐行来源" magit-blame-read-only-mode-map
-     ("n" "下一 blame chunk") ("p" "上一 blame chunk")
-     ("RET" "查看对应提交") ("q" "退出 blame")))
-  "Magit help descriptions; command names are read from the live maps.")
-
 (defun lens-help-binding-line (key description &optional map)
   "Describe KEY and DESCRIPTION using its actual binding in MAP or the global map."
   (let ((binding (keymap-lookup (or map (current-global-map)) key)))
@@ -88,21 +74,24 @@
 
 (defun lens-help-text ()
   "Generate the Chinese quick reference from the shortcuts and actual keymaps."
-  (require 'magit)
-  (require 'magit-blame)
   (concat
    "Code Lens · 代码阅读 / review 速查\n"
    "================================\n"
    "C- = Ctrl，M- = Meta（Mac 通常 Option；终端可先按 Esc）。\n"
    "C-c r 是阅读前缀：先按 C-c，再按 r，最后按所列的键。\n"
    "方括号内是实际 keymap 中的命令名；M-x 也可调用。\n\n"
+   (lens-primary-package-summary)
+   "\n补全与预览\n"
+   "  Vertico：C-n / C-p 选择候选，RET 确认，C-g 取消。\n"
+   "  Orderless：用空格分隔多个词，顺序不限；Marginalia 在候选旁显示说明。\n"
+   "  Consult 搜索：#搜索表达式#结果过滤；输入后异步搜索，可预览跳转。\n"
+   "  预览会打开相关文件；代码仍默认只读，不自动启动语言服务器。\n\n"
    "启动\n"
    "  cd ~/gh-repos/code-lens\n"
    "  ./bin/code-lens        GUI；./bin/code-lens -nw        终端\n"
    "  ./bin/code-lens <项目目录或代码文件>\n\n"
    "阅读约定\n"
    "  代码默认只读。C-c r e / C-x C-q 只解锁当前 buffer，显式保存才写盘。\n"
-   "  只读不限制 Magit 的 stage / commit 等 Git 操作；本配置不会自动执行它们。\n"
    "  默认不启动 REPL / LSP，不自动格式化；Clojure / OCaml 都可直接阅读。\n"
    "  未连接 LSP 时，定义跳转只用当前文件文本索引，不解析类型或命名空间。\n"
    "  跨文件精确语义导航：C-c r s 手动连接已有 clojure-lsp / ocamllsp。\n"
@@ -115,20 +104,11 @@
               (mapconcat (lambda (entry)
                            (lens-help-binding-line (car entry) (nth 2 entry)))
                          (cdr group) "")))
-    lens-shortcut-groups "\n")
+    (cl-remove-if (lambda (group) (string= (car group) "Git review"))
+                  lens-shortcut-groups) "\n")
    "\nEmacs 内置阅读键\n"
    (mapconcat (lambda (entry) (lens-help-binding-line (car entry) (cadr entry)))
               lens-builtin-help "")
-   "\nMagit 内常用键（只在相应 Magit buffer 生效）\n"
-   "具体 section 可进一步重映射命令；C-h k 查看所在位置的实际操作。\n"
-   (mapconcat
-    (lambda (group)
-      (concat (car group) "\n"
-              (mapconcat (lambda (entry)
-                           (lens-help-binding-line (car entry) (cadr entry)
-                                                   (symbol-value (cadr group))))
-                         (cddr group) "")))
-    lens-magit-help-groups "\n")
    "\n此速查仅填充空且未修改的 *scratch*；已有笔记不会被重载覆盖。\n"
    "C-c r ? 随时在独立 Help 窗口查看最新速查，q 关闭该窗口。\n"))
 

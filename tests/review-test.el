@@ -77,7 +77,7 @@
    (with-current-buffer (find-file-noselect clj)
      (should (member clj (project-files (project-current t))))
      (should (fboundp 'lens-search))
-     (should (eq (key-binding (kbd "C-c r /")) 'lens-search))
+     (should (eq (key-binding (kbd "C-c r G")) 'lens-search))
      (let* ((buffer (lens-search "answer"))
             (process (get-buffer-process buffer))
             (deadline (+ (float-time) 8)))
@@ -188,27 +188,26 @@
   (let ((text (lens-help-text)))
     (map-keymap
      (lambda (event binding)
-       (when (commandp binding)
+       (when (and (commandp binding)
+                  (not (string-prefix-p "magit-" (symbol-name binding))))
          (should (string-match-p
                   (regexp-quote (concat "C-c r " (key-description (vector event)))) text))
          (should (string-match-p (regexp-quote (symbol-name binding)) text))))
      lens-review-map)
-    (dolist (key '("M-." "M-," "M-o" "C-x g" "C-c <left>" "C-c <right>"))
+    (dolist (key '("M-." "M-," "M-o" "C-c <left>" "C-c <right>"))
       (should (string-match-p (regexp-quote key) text))
       (should (string-match-p
                (regexp-quote (symbol-name (keymap-lookup (current-global-map) key))) text)))
-    (dolist (command '(magit-section-forward magit-section-toggle magit-stage
-                      magit-unstage magit-log magit-diff magit-commit magit-dispatch))
-      (should (string-match-p (regexp-quote (symbol-name command)) text)))))
+    (should-not (string-match-p "未绑定" text))))
 
 (ert-deftest lens-scratch-guide-reflects-current-keymap ()
   (should (fboundp 'lens-help-text))
-  (let ((old (keymap-lookup lens-review-map "g")))
+  (let ((old (keymap-lookup lens-review-map "/")))
     (unwind-protect
         (progn
-          (keymap-set lens-review-map "g" #'ignore)
-          (should (string-match-p "C-c r g.*ignore" (lens-help-text))))
-      (keymap-set lens-review-map "g" old))))
+          (keymap-set lens-review-map "/" #'ignore)
+          (should (string-match-p "C-c r /.*ignore" (lens-help-text))))
+      (keymap-set lens-review-map "/" old))))
 
 (ert-deftest lens-scratch-reload-preserves-user-content ()
   (should (fboundp 'lens-initialize-scratch))
@@ -257,10 +256,154 @@
      (should buffer-read-only)
      (should (equal (buffer-string) (lens-help-text))))))
 
-(ert-deftest lens-help-magit-contexts-have-valid-bindings ()
+(ert-deftest lens-scratch-omits-magit-instructions ()
   (let ((text (lens-help-text)))
-    (should-not (string-match-p "未绑定" text))
-    (dolist (command '(magit-blame-next-chunk magit-blame-previous-chunk
-                      magit-show-commit magit-blame-quit
-                      magit-diff-show-or-scroll-up magit-diff-show-or-scroll-down))
-      (should (string-match-p (regexp-quote (symbol-name command)) text)))))
+    (dolist (instruction '("Magit 内常用键" "Magit status" "magit-status"
+                           "blame chunk" "stage（" "Git review"))
+      (should-not (string-match-p (regexp-quote instruction) text)))
+    (should (string-match-p "magit [0-9]" text))))
+
+(ert-deftest lens-primary-package-summary-real-versions ()
+  (should (fboundp 'lens-primary-package-summary))
+  (let ((text (lens-primary-package-summary)))
+    (dolist (name '(magit clojure-mode tuareg rainbow-delimiters
+                         consult vertico orderless marginalia))
+      (should (package-installed-p name))
+      (let ((desc (cadr (assq name package-alist))))
+        (should (string-match-p
+                 (regexp-quote (format "%s %s" name
+                                       (package-version-join (package-desc-version desc))))
+                 text))))
+    (dolist (name '(compat cond-let llama seq magit-section transient with-editor
+                          project xref eglot imenu))
+      (should-not (string-match-p (format "^  %s " name) text))))
+  (let ((package-alist (assq-delete-all 'marginalia (copy-sequence package-alist))))
+    (should-not (string-match-p "marginalia" (lens-primary-package-summary)))))
+
+(ert-deftest lens-completion-orderless-real-candidates ()
+  (dolist (name '(consult vertico orderless marginalia))
+    (should (package-installed-p name)))
+  (should vertico-mode)
+  (should marginalia-mode)
+  (should-not fido-mode)
+  (should-not fido-vertical-mode)
+  (should-not icomplete-mode)
+  (dolist (input '("review answer" "answer review"))
+    (should (equal "review-answer"
+                   (car (completion-all-completions
+                         input '("review-answer" "other-symbol") nil (length input))))))
+  (let ((table (lambda (string predicate action)
+                 (if (eq action 'metadata)
+                     '(metadata (category . file))
+                   (complete-with-action action '("src/review-answer.clj" "src/other.ml")
+                                         string predicate)))))
+    (should (equal "src/review-answer.clj"
+                   (car (completion-all-completions "answer review" table nil 13))))))
+
+(ert-deftest lens-marginalia-real-command-and-file-annotations ()
+  (should (package-installed-p 'marginalia))
+  (save-window-excursion
+    (switch-to-buffer (current-buffer))
+  (let* ((metadata '(metadata (category . command)))
+         (affix (completion-metadata-get metadata 'affixation-function))
+         (rows (and affix (funcall affix '("consult-line")))))
+    (should (functionp affix))
+    (should (string-match-p "matching line" (caddar rows))))
+  (lens-test-project
+   (let* ((metadata '(metadata (category . file)))
+          (affix (completion-metadata-get metadata 'affixation-function))
+          (rows (and affix (funcall affix (list clj)))))
+     (should (functionp affix))
+     (should (stringp (caddar rows)))
+     (should (> (length (caddar rows)) 0))))))
+
+(ert-deftest lens-consult-keys-and-xref ()
+  (dolist (entry '(("C-c r /" . lens-consult-search)
+                   ("C-c r G" . lens-search)
+                   ("C-c r L" . consult-line)
+                   ("C-c r i" . consult-imenu)
+                   ("C-c r I" . consult-imenu-multi)
+                   ("C-x b" . consult-buffer)))
+    (should (eq (key-binding (kbd (car entry))) (cdr entry))))
+  (should (eq xref-show-xrefs-function 'consult-xref))
+  (should (eq xref-show-definitions-function 'consult-xref)))
+
+(ert-deftest lens-consult-real-ripgrep-builder ()
+  (should (package-installed-p 'consult))
+  (lens-test-project
+   (with-temp-file ".gitignore" (insert "ignored.ml\n"))
+   (with-temp-file "ignored.ml" (insert "let answer = 0\n"))
+   (let* ((builder (consult--ripgrep-make-builder '(".")))
+          (args (car (funcall builder "answer")))
+          (text (with-temp-buffer
+                  (should (zerop (apply #'call-process (car args) nil t nil (cdr args))))
+                  (buffer-string))))
+     (should (string-match-p "review.clj" text))
+     (should (string-match-p "review.ml" text))
+     (should-not (string-match-p "ignored.ml" text)))))
+
+(defun lens-test-select-minibuffer (input match command)
+  "Run COMMAND with real minibuffer INPUT and select a candidate matching MATCH."
+  (let (timer selected minibuffer inserted
+        (deadline (+ (float-time) 10)))
+    (unwind-protect
+        (minibuffer-with-setup-hook
+            (:append
+             (lambda ()
+               (setq minibuffer (current-buffer))
+               (setq timer
+                     (run-at-time
+                      0.05 0.05
+                      (lambda ()
+                        (when (and (buffer-live-p minibuffer) (active-minibuffer-window))
+                          (with-current-buffer minibuffer
+                            (unless inserted
+                              (delete-minibuffer-contents)
+                              (insert input)
+                              (setq inserted t))
+                            (if (> (float-time) deadline)
+                                (abort-recursive-edit)
+                              (vertico--update)
+                              (when-let ((index (cl-position-if
+                                                 (lambda (cand) (string-match-p match cand))
+                                                 vertico--candidates)))
+                                (setq selected (nth index vertico--candidates))
+                                (vertico--goto index)
+                                (vertico-exit))))))))))
+          (call-interactively command))
+      (when timer (cancel-timer timer)))
+    (should selected)
+    selected))
+
+(ert-deftest lens-consult-interactive-line-and-imenu ()
+  :tags '(interactive)
+  (should (package-installed-p 'consult))
+  (skip-unless (not noninteractive))
+  (lens-test-project
+   (switch-to-buffer (find-file-noselect clj))
+   (goto-char (point-min))
+   (lens-test-select-minibuffer "x 42" "x 42" #'consult-line)
+   (should (= (line-number-at-pos) 3))
+   (should buffer-read-only)
+   (goto-char (point-max))
+   (lens-test-select-minibuffer "answer" "answer" #'consult-imenu)
+   (should (looking-at-p "(defn answer"))
+   (should buffer-read-only)
+   (switch-to-buffer (find-file-noselect ml))
+   (goto-char (point-max))
+   (lens-test-select-minibuffer "answer" "answer" #'consult-imenu)
+   (should (looking-at-p "let answer"))
+   (should buffer-read-only)))
+
+(ert-deftest lens-consult-interactive-ripgrep-readonly ()
+  :tags '(interactive)
+  (should (package-installed-p 'consult))
+  (skip-unless (not noninteractive))
+  (lens-test-project
+   (switch-to-buffer (find-file-noselect clj))
+   (lens-test-select-minibuffer "#answer#review.ml" "review.ml" #'lens-consult-search)
+   (should (equal (buffer-file-name) ml))
+   (should buffer-read-only)
+   (should-not (bound-and-true-p eglot--managed-mode))
+   (should (string= "" (with-temp-buffer
+                         (call-process "git" nil t nil "diff" "--") (buffer-string))))))

@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+lens_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+exec "$lens_root/bin/code-lens" -nw --load "$lens_root/tests/interactive-runner.el"
