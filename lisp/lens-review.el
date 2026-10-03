@@ -121,35 +121,12 @@
                                     (tuareg-mode . ("ocamllsp")))))
       (call-interactively #'eglot))))
 
-(defvar-keymap lens-review-map
-  :doc "Code Lens review prefix."
-  "g" #'magit-status
-  "l" #'magit-log-current
-  "b" #'magit-blame-addition
-  "d" #'magit-diff-dwim
-  "p" #'project-switch-project
-  "f" #'project-find-file
-  "/" #'lens-search
-  "i" #'imenu
-  "." #'lens-definition
-  "," #'xref-go-back
-  "r" #'xref-find-references
-  "s" #'lens-semantic-navigation
-  "e" #'read-only-mode
-  "w" #'other-window
-  "o" #'occur
-  "t" #'toggle-truncate-lines
-  "h" #'outline-toggle-children)
-(keymap-global-set "C-c r" lens-review-map)
-(keymap-global-set "M-." #'lens-definition)
-(keymap-global-set "M-," #'xref-go-back)
-(keymap-global-set "M-o" #'other-window)
-(keymap-global-set "C-x g" #'magit-status)
-(keymap-global-set "C-c <left>" #'winner-undo)
-(keymap-global-set "C-c <right>" #'winner-redo)
 ;; Magit owns its maps and write operations. No stage/checkout/commit runs on startup.
 (with-eval-after-load 'magit
   (setq magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1
         magit-diff-refine-hunk t
         magit-save-repository-buffers nil))
+(require 'lens-help)
+(lens-install-bindings)
+(lens-configure-scratch)
 (provide 'lens-review)

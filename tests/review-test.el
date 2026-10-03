@@ -148,3 +148,119 @@
      (should-not (file-exists-p (expand-file-name ".lens-tags" default-directory)))
      (let ((exec-path nil))
        (should-error (lens-semantic-navigation) :type 'user-error)))))
+
+(defmacro lens-test-scratch (&rest body)
+  "Run BODY with a fresh scratch buffer without disturbing the original."
+  `(let ((original (get-buffer "*scratch*")) scratch)
+     (when original
+       (with-current-buffer original
+         (rename-buffer (generate-new-buffer-name " *lens-original-scratch*"))))
+     (unwind-protect
+         (progn
+           (setq scratch (get-buffer-create "*scratch*"))
+           (with-current-buffer scratch ,@body))
+       (when (buffer-live-p scratch)
+         (with-current-buffer scratch (set-buffer-modified-p nil))
+         (kill-buffer scratch))
+       (when (buffer-live-p original)
+         (with-current-buffer original (rename-buffer "*scratch*"))))))
+
+(ert-deftest lens-scratch-default-startup-guide ()
+  (should (stringp initial-scratch-message))
+  (with-current-buffer (get-buffer "*scratch*")
+    (should (string-match-p "Code Lens" (buffer-string)))
+    (should (eq major-mode 'text-mode))
+    (should-not buffer-read-only)
+    (should-not (buffer-modified-p)))
+  (lens-test-scratch
+   (should (fboundp 'lens-initialize-scratch))
+   (lens-initialize-scratch)
+   (should (equal (buffer-string) initial-scratch-message))
+   (should (eq major-mode 'text-mode))
+   (should-not (buffer-modified-p))
+   (should (string-match-p "只读" (buffer-string)))
+   (should (string-match-p "手动" (buffer-string)))
+   (should (string-match-p "当前文件" (buffer-string)))
+   (should (string-match-p "bin/code-lens -nw" (buffer-string)))))
+
+(ert-deftest lens-scratch-guide-covers-installed-bindings ()
+  (should (fboundp 'lens-help-text))
+  (let ((text (lens-help-text)))
+    (map-keymap
+     (lambda (event binding)
+       (when (commandp binding)
+         (should (string-match-p
+                  (regexp-quote (concat "C-c r " (key-description (vector event)))) text))
+         (should (string-match-p (regexp-quote (symbol-name binding)) text))))
+     lens-review-map)
+    (dolist (key '("M-." "M-," "M-o" "C-x g" "C-c <left>" "C-c <right>"))
+      (should (string-match-p (regexp-quote key) text))
+      (should (string-match-p
+               (regexp-quote (symbol-name (keymap-lookup (current-global-map) key))) text)))
+    (dolist (command '(magit-section-forward magit-section-toggle magit-stage
+                      magit-unstage magit-log magit-diff magit-commit magit-dispatch))
+      (should (string-match-p (regexp-quote (symbol-name command)) text)))))
+
+(ert-deftest lens-scratch-guide-reflects-current-keymap ()
+  (should (fboundp 'lens-help-text))
+  (let ((old (keymap-lookup lens-review-map "g")))
+    (unwind-protect
+        (progn
+          (keymap-set lens-review-map "g" #'ignore)
+          (should (string-match-p "C-c r g.*ignore" (lens-help-text))))
+      (keymap-set lens-review-map "g" old))))
+
+(ert-deftest lens-scratch-reload-preserves-user-content ()
+  (should (fboundp 'lens-initialize-scratch))
+  (lens-test-scratch
+   (emacs-lisp-mode)
+   (read-only-mode -1)
+   (insert "; 我的笔记\n(+ 1 2)\n")
+   (goto-char 5)
+   (let ((text (buffer-string)) (position (point)) (mode major-mode))
+     (read-only-mode 1)
+     (load (expand-file-name "lisp/lens-review.el" lens-test-root) nil t)
+     (load (expand-file-name "init.el" lens-test-root) nil t)
+     (should (equal text (buffer-string)))
+     (should (= position (point)))
+     (should (eq major-mode mode))
+     (should buffer-read-only)
+     (should (buffer-modified-p)))))
+
+(ert-deftest lens-scratch-preserves-modified-empty-and-whitespace ()
+  (should (fboundp 'lens-initialize-scratch))
+  (lens-test-scratch
+   (set-buffer-modified-p t)
+   (lens-initialize-scratch)
+   (should (zerop (buffer-size)))
+   (should (buffer-modified-p)))
+  (lens-test-scratch
+   (insert " \n")
+   (set-buffer-modified-p nil)
+   (lens-initialize-scratch)
+   (should (equal " \n" (buffer-string))))
+  (lens-test-scratch
+   (read-only-mode 1)
+   (lens-initialize-scratch)
+   (should (zerop (buffer-size)))
+   (should buffer-read-only)))
+
+(ert-deftest lens-help-refresh-preserves-scratch-notes ()
+  (should (eq (key-binding (kbd "C-c r ?")) 'lens-show-help))
+  (lens-test-scratch
+   (insert "我的笔记")
+   (lens-show-help)
+   (lens-show-help)
+   (should (equal "我的笔记" (buffer-string)))
+   (with-current-buffer "*Code Lens Help*"
+     (should (derived-mode-p 'help-mode))
+     (should buffer-read-only)
+     (should (equal (buffer-string) (lens-help-text))))))
+
+(ert-deftest lens-help-magit-contexts-have-valid-bindings ()
+  (let ((text (lens-help-text)))
+    (should-not (string-match-p "未绑定" text))
+    (dolist (command '(magit-blame-next-chunk magit-blame-previous-chunk
+                      magit-show-commit magit-blame-quit
+                      magit-diff-show-or-scroll-up magit-diff-show-or-scroll-down))
+      (should (string-match-p (regexp-quote (symbol-name command)) text)))))

@@ -33,10 +33,13 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 
 ## 最常用的键
 
+启动后 `*scratch*` 默认显示完整中文速查，包括全部 Code Lens 自定义键、内置阅读键和 Magit 常用键。`C-c r ?` 在独立 Help 窗口重新生成最新速查，`q` 关闭；已有 scratch 笔记不会被重载或刷新覆盖。速查由 `lisp/lens-help.el` 的同一份功能表与实际 keymap 生成。
+
 `C-` 表示 Ctrl，`M-` 表示 Meta；Mac GUI 通常是 Option，终端可用 Esc 后再按键。`C-c r` 是阅读命令前缀，后接表中的一个键。`C-h k` 查看某键用途，`C-h b` 查看当前全部绑定。
 
 | 快捷键 | 用途 |
 | --- | --- |
+| `C-c r ?` | 重新生成中文速查到独立 Help 窗口 |
 | `C-x g` / `C-c r g` | Magit status |
 | `C-c r l` / `b` / `d` | 当前分支 log / 当前文件 blame / DWIM diff |
 | `C-c r p` / `f` | 切换项目 / 查找项目文件，支持模糊筛选 |
@@ -88,6 +91,6 @@ Eglot 的格式化、rename 和 code action 能力被忽略，没有保存时编
 
 bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加载源码。`seq` 如内置版本已满足要求则直接使用 Emacs 自带实现。不要在此 profile 内用 package 菜单升级依赖；要更换版本应审阅锁文件并重新生成隔离包目录。删除 `.local/` 后重新运行 bootstrap 可恢复，但会清掉此配置自己的历史/自定义。个人 Emacs 配置不受影响。
 
-文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`tests/review-test.el` 是可重复的检查源码。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
+文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-help.el` 维护快捷键与启动速查，`tests/review-test.el` 是可重复的检查源码。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
 
 官方参考：[Magit](https://magit.vc/manual/magit.html)、[GNU ELPA](https://elpa.gnu.org/)、[NonGNU ELPA](https://elpa.nongnu.org/)、[Emacs xref](https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html)。
