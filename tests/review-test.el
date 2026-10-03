@@ -318,7 +318,8 @@
      (should (> (length (caddar rows)) 0))))))
 
 (ert-deftest lens-consult-keys-and-xref ()
-  (dolist (entry '(("C-c r /" . lens-consult-search)
+  (dolist (entry '(("C-s" . consult-line)
+                   ("C-c r /" . lens-consult-search)
                    ("C-c r G" . lens-search)
                    ("C-c r L" . consult-line)
                    ("C-c r i" . consult-imenu)
@@ -407,3 +408,61 @@
    (should-not (bound-and-true-p eglot--managed-mode))
    (should (string= "" (with-temp-buffer
                          (call-process "git" nil t nil "diff" "--") (buffer-string))))))
+
+(ert-deftest lens-consult-line-common-mode-bindings ()
+  (require 'magit)
+  (require 'dired)
+  (dolist (mode '(text-mode clojure-mode tuareg-mode emacs-lisp-mode
+                           help-mode dired-mode magit-status-mode magit-diff-mode))
+    (with-temp-buffer
+      (funcall mode)
+      (should (eq (key-binding (kbd "C-s")) 'consult-line))
+      (should (eq (key-binding (kbd "C-c r L")) 'consult-line))))
+  (let ((text (lens-help-text)))
+    (should (string-match-p "C-s +.*当前文件行搜索.*\\[consult-line\\]" text))
+    (should-not (string-match-p "C-s 仍为增量搜索" text))))
+
+(ert-deftest lens-consult-interactive-c-s-select-and-cancel ()
+  :tags '(interactive)
+  (skip-unless (not noninteractive))
+  (lens-test-project
+   (dolist (file (list clj ml))
+     (switch-to-buffer (find-file-noselect file))
+     (goto-char (point-min))
+     (let ((text (buffer-string)) (modified (buffer-modified-p)))
+       (let (prompt)
+         (minibuffer-with-setup-hook
+             (:append (lambda () (setq prompt (minibuffer-prompt))))
+           (execute-kbd-macro (vconcat (kbd "C-s") "x 42" (kbd "RET"))))
+         (should (string-prefix-p "Go to line" prompt)))
+       (should (save-excursion (beginning-of-line) (search-forward "42" (line-end-position) t)))
+       (should buffer-read-only)
+       (should (equal text (buffer-string)))
+       (should (eq modified (buffer-modified-p)))))
+   ;; Search typed, unsaved text and cancel through the real C-g input event.
+   (switch-to-buffer (find-file-noselect clj))
+   (read-only-mode -1)
+   (goto-char (point-max))
+   (insert "; user's unsaved search-note\n")
+   (read-only-mode 1)
+   (let ((text (buffer-string)) (origin (point)) prompt query minibuffer)
+     (let ((capture (lambda (&rest _)
+                      (when (equal (minibuffer-contents-no-properties) "unsaved search-note")
+                        (setq query (minibuffer-contents-no-properties))))))
+       (unwind-protect
+           (minibuffer-with-setup-hook
+               (:append
+                (lambda ()
+                  (setq prompt (minibuffer-prompt) minibuffer (current-buffer))
+                  (add-hook 'after-change-functions capture nil t)))
+             (execute-kbd-macro (vconcat (kbd "C-s") "unsaved search-note" (kbd "C-g"))))
+         (when (buffer-live-p minibuffer)
+           (with-current-buffer minibuffer (remove-hook 'after-change-functions capture t)))
+         (setq quit-flag nil)))
+     (should (string-prefix-p "Go to line" prompt))
+     (should (equal query "unsaved search-note"))
+     (should-not (active-minibuffer-window))
+     (should (equal text (buffer-string)))
+     (should (= origin (point)))
+     (should (buffer-modified-p))
+     (should buffer-read-only))))

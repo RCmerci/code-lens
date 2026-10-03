@@ -46,9 +46,9 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 | `C-c r p` / `f` | 切换项目 / 查找项目文件，支持模糊筛选 |
 | `C-c r /` | Consult 项目搜索与预览；优先 `rg`，无 rg 时用 grep |
 | `C-c r G` | 传统 grep 结果列表，保留原项目搜索与内置回退 |
-| `C-c r L` | Consult 当前文件行搜索与预览 |
+| `C-s` / `C-c r L` | Consult 当前文件行搜索与预览；RET 跳转，C-g 取消 |
 | `C-x b` | Consult 切换 buffer、最近文件与书签，可预览 |
-| `C-c r o` / `C-s` | 当前文件 occur 列表 / 增量搜索 |
+| `C-c r o` | 当前文件 occur 列表 |
 | `C-c r i` | Consult 当前文件定义索引与预览 |
 | `C-c r I` | 同项目、同语言已打开 buffer 的定义索引与预览 |
 | `M-.` / `M-,` | 定义 / 返回；也可用 `C-c r .` / `,` |
@@ -71,7 +71,9 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 
 Vertico 是唯一的 minibuffer 候选界面，Fido/Icomplete 已停用。`C-n` / `C-p` 选择候选，`RET` 确认，`C-g` 取消。Orderless 支持空格分隔的多词任意顺序匹配；文件路径同时保留 partial-completion。Marginalia 在命令、文件候选旁显示说明与属性。
 
-Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`：先在项目中搜索 answer，再筛选 review.ml 的结果。搜索按需异步执行，遵守 ignore；候选预览有短暂防抖，可能打开代码 buffer，但继续保持默认只读，不启动 LSP。xref 的结果选择也接入 Consult，语义准确性仍取决于后端。`C-s` 保留原生增量搜索，`C-c r o` 保留 occur。
+Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`：先在项目中搜索 answer，再筛选 review.ml 的结果。搜索按需异步执行，遵守 ignore；候选预览有短暂防抖，可能打开代码 buffer，但继续保持默认只读，不启动 LSP。xref 的结果选择也接入 Consult，语义准确性仍取决于后端。`C-s` 打开 Consult 当前文件行搜索，`C-c r L` 是同一命令的别名；`RET` 跳转到选中行，`C-g` 取消并回到搜索前位置。搜索不会修改正文或只读状态，已有未保存输入会保留。`C-c r o` 保留 occur。
+
+已有 Code Lens 实例可执行 `M-: (progn (load (expand-file-name "lisp/lens-help.el" lens-root) nil t) (lens-install-bindings) (lens-configure-scratch)) RET` 即时应用新按键；非空 scratch 笔记不会被覆盖。随后 `C-c r ?` 在独立 Help 窗口查看新速查，无需重启。
 
 ## Review 流程
 

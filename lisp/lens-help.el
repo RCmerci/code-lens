@@ -8,7 +8,8 @@
      ("C-c r f" project-find-file "查找项目文件")
      ("C-c r /" lens-consult-search "Consult 项目搜索预览；优先 rg，无 rg 时用 grep")
      ("C-c r G" lens-search "传统 grep 结果列表；M-g n / p 移动命中")
-     ("C-c r L" consult-line "当前文件行搜索与预览；C-s 仍为增量搜索")
+     ("C-s" consult-line "当前文件行搜索与预览；RET 跳转，C-g 取消")
+     ("C-c r L" consult-line "当前文件行搜索与预览，同 C-s")
      ("C-x b" consult-buffer "切换 buffer / 最近文件 / 书签，可预览")
      ("C-c r o" occur "列出当前文件匹配行"))
     ("定义与结构导航"
@@ -52,8 +53,7 @@
   (keymap-global-set "C-c r" lens-review-map))
 
 (defconst lens-builtin-help
-  '(("C-s" "当前文件增量搜索")
-    ("M-?" "xref 引用，同 C-c r r")
+  '(("M-?" "xref 引用，同 C-c r r")
     ("C-M-a" "定义开头") ("C-M-e" "定义结尾")
     ("C-M-f" "结构向前") ("C-M-b" "结构向后") ("C-M-u" "移到外层结构")
     ("M-g g" "跳到行")
