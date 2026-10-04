@@ -11,6 +11,10 @@
 (require 'vertico)
 (require 'orderless)
 (require 'marginalia)
+(require 'embark)
+(require 'embark-consult)
+;; This chord is unbound in the inherited minibuffer maps and Vertico.
+(keymap-set minibuffer-local-map "C-c C-o" #'embark-collect)
 (require 'lens-lsp)
 (require 'lens-source-reading)
 

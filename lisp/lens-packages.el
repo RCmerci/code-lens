@@ -11,7 +11,10 @@
     (vertico "纵向 minibuffer 候选界面")
     (orderless "多词任意顺序匹配")
     (marginalia "候选说明与文件信息")
-    (modus-themes "modus-operandi-tinted 浅色主题"))
+    (embark "将当前候选收集到独立 buffer")
+    (embark-consult "Consult 收集结果跳转与预览")
+    (modus-themes "modus-operandi-tinted 浅色主题")
+    (codex "当前文件预设代码问答；只读 Codex CLI"))
   "Primary third-party features; builtin packages and support dependencies are omitted.")
 
 (defun lens-primary-package-summary ()

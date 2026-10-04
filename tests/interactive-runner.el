@@ -1,6 +1,7 @@
 ;;; -*- lexical-binding: t; -*-
 (require 'ert)
-(load (expand-file-name "tests/review-test.el" lens-root) nil t)
+(load (expand-file-name "tests/codex-test.el" lens-root) nil t)
+(load (expand-file-name "tests/embark-test.el" lens-root) nil t)
 (add-hook
  'emacs-startup-hook
  (lambda ()
@@ -20,7 +21,12 @@
                                 (ert-stats-completed-unexpected stats)))
                 (insert (format "Vertico=%S Marginalia=%S Fido=%S\n"
                                 vertico-mode marginalia-mode fido-mode))
-                (insert (lens-primary-package-summary)))
+                (insert "Codex dispatch mocked; no external question sent.\n")
+                (insert (lens-primary-package-summary))
+                (dolist (test (ert-select-tests '(tag interactive) t))
+                  (let ((result (ert-test-most-recent-result test)))
+                    (when (ert-test-failed-p result)
+                      (insert (format "FAILED %s: %S\n" (ert-test-name test) (ert-test-failed-condition result)))))))
               (kill-emacs (if (zerop (ert-stats-completed-unexpected stats)) 0 1)))
           (error
            (with-temp-file report (insert (format "ERROR %S\n" failure)))

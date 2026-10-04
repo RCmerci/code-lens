@@ -1,6 +1,6 @@
 # Code Lens
 
-一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Modus Themes，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
+一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Embark、embark-consult、Modus Themes、Codex，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
 
 ## 启动
 
@@ -34,12 +34,13 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 
 ## 最常用的键
 
-启动后 `*scratch*` 显示阅读相关快捷键与实际安装的八个主要第三方包及版本，不讲解 Magit 用法；Git 快捷键仍保留。`C-c r ?` 在独立 Help 窗口重新生成最新速查，`q` 关闭；已有 scratch 笔记不会被重载或刷新覆盖。速查由 `lisp/lens-help.el` 的同一份功能表与实际 keymap 生成。
+启动后 `*scratch*` 显示阅读相关快捷键与实际安装的主要第三方包及版本，不讲解 Magit 用法；Git 快捷键仍保留。`C-c r ?` 在独立 Help 窗口重新生成最新速查，`q` 关闭；已有 scratch 笔记不会被重载或刷新覆盖。速查由 `lisp/lens-help.el` 的同一份功能表与实际 keymap 生成。
 
 `C-` 表示 Ctrl，`M-` 表示 Meta；Mac GUI 通常是 Option，终端可用 Esc 后再按键。`C-c r` 是阅读命令前缀，后接表中的一个键。`C-h k` 查看某键用途，`C-h b` 查看当前全部绑定。
 
 | 快捷键 | 用途 |
 | --- | --- |
+| minibuffer 内 `C-c C-o` | Embark 收集当前候选到独立 buffer |
 | `C-c r ?` | 重新生成中文速查到独立 Help 窗口 |
 | `C-x g` / `C-c r g` | Magit status |
 | `C-c r l` / `b` / `d` | 当前分支 log / 当前文件 blame / DWIM diff |
@@ -74,13 +75,15 @@ Vertico 是唯一的 minibuffer 候选界面，Fido/Icomplete 已停用。`C-n` 
 
 Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`：先在项目中搜索 answer，再筛选 review.ml 的结果。搜索按需异步执行，遵守 ignore；候选预览有短暂防抖，可能打开代码 buffer，但继续保持默认只读，Clojure / OCaml buffer 自动连接 Eglot。xref 的结果选择也接入 Consult，语义准确性仍取决于后端。`C-s` 打开 Consult 当前文件行搜索，`C-c r L` 是同一命令的别名；`RET` 跳转到选中行，`C-g` 取消并回到搜索前位置。搜索不会修改正文或只读状态，已有未保存输入会保留。`C-c r o` 保留 occur。
 
+在文件补全或 Consult 搜索的 minibuffer 中按 `C-c C-o`，`embark-collect` 把**当前筛选后的候选**收集到独立只读 buffer，并自动退出原 minibuffer，不选择原命令的某个结果。列表中 `n` / `p` 浏览候选，在候选文字上 `RET` 打开文件或跳到搜索命中，`q` 关闭窗口；列表会保留，可继续浏览。`C-g` 仍可在收集前取消原 minibuffer。`embark-consult` 提供 Consult 命中的跳转与预览整合。该绑定只在 minibuffer 内生效，不改变源码 `c/f` 或普通输入。
+
 已有 Code Lens 实例可以在 `M-:` 执行以下表达式应用本次更新；保留 scratch 笔记、已有正文和只读状态，无需重启。随后 `C-c r ?` 在独立 Help 窗口查看新速查。
 
 ```elisp
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-lsp" "lens-source-reading" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-lsp" "lens-codex" "lens-source-reading" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -105,6 +108,8 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 
 | 单键 | 操作 |
 | --- | --- |
+| `c` | Vertico 选择当前文件 Codex 预设问答 |
+| `f` | project-find-file 查找项目文件 |
 | `t` | Eglot 类型 / 符号说明；OCaml 显示类型，Clojure 显示 hover 文档 |
 | `d` / `b` | Eglot 定义 / xref 返回 |
 | `r` | Eglot 引用，Consult 选择结果 |
@@ -116,6 +121,21 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 | `?` | 独立窗口显示完整单键帮助 |
 
 `C-c r e` 或 `C-x C-q` 临时解锁后，字符恢复普通输入；重新锁定后单键恢复。关闭 `lens-reading-mode` 同样恢复编辑。`t/d/r` 在服务器未连接或当前位置没有符号时给出提示；`d/b` 保留正常 xref 返回栈。Clojure 是动态语言，hover 文档不等于静态类型推断。
+
+## 当前文件 Codex 问答
+
+两语言只读阅读状态下按 `c`，Vertico 显示两个预设；`RET` 确认并发送，`C-g` 取消时不启动 CLI、不发问题：
+
+- `给我当前文件<实际文件名>中最重要的glossary的解释`
+- `给我解释当前文件<实际文件名>中最重要的几个类型和函数`
+
+预设统一维护在 `lens-codex-prompt-templates`。文件名从按 `c` 时的源 `buffer-file-name` 捕获，保留实际 `.clj/.cljc/.ml/.mli` 扩展名及 Unicode/空格，不猜测接口文件；无文件 buffer 会提示并停止。消息附上源文件绝对路径、项目路径、光标行列、选区范围以及**整个当前 buffer 的快照（含未保存输入）**；不会自动附上项目其他文件。确认前请知道这些内容会经现有 Codex CLI 发送给其模型服务。源码正文、光标和只读状态不变，解锁后 `c/f` 都恢复普通字符输入。
+
+使用用户指定的 [benthamite/codex](https://github.com/benthamite/codex/tree/6981e418588a264bd41be0afba4084a8a72411ab)，锁定版本 0.4.0 / commit `6981e418588a264bd41be0afba4084a8a72411ab`。采用原生 `app-server` backend，无需终端模拟或 vterm；Eat 是该包声明的依赖，已安装但此 backend 不使用。每个项目复用名为 `lens-qa` 的专属会话。
+
+需要 PATH 中已有 `codex` CLI 和已有登录；配置不安装 CLI、不自动登录、不创建凭据。缺少 CLI 或登录时给出明确提示；自行完成 `codex login` 后重试。QA 会话使用服务 `model/list` 公布的默认模型（没有默认标志时选第一项）及其默认 reasoning effort，只覆盖该会话，避免 CLI 全局模型不支持当前登录类型；不修改全局 Codex 配置。首次问题等到服务回应确认 `read-only` 沙箱与 `on-request` 后发送，每次新 turn 同样检查权限，不启用 full-auto 或自动批准。只读沙箱限制写入，不限制所有读取，消息也明确要求不读其他文件。
+
+禁用该 Emacs 包的 hooks 安装、通知和 transcript 回读，不修改用户 `~/.codex/config.toml` / hooks，不扫描私有 session 文件。CLI 自己仍按其既有配置运行并可记录本次新会话。问答测试仅发送一次性合成代码；普通检查与终端候选测试不发外部问题。
 
 ## 文本导航与语义导航
 
@@ -130,12 +150,12 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 
 ## 包与维护
 
-主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
+主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**、Embark **1.2**、embark-consult **1.2**、Codex **0.4.0**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
 
-`packages.lock.json` 包含全部外部依赖的准确版本、官方 GNU/NonGNU ELPA HTTPS 下载地址和 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从官方 HTTPS 取得源码时记录的校验值，不是独立的签名验证。
+`packages.lock.json` 包含全部外部依赖的准确版本、GNU/NonGNU ELPA、MELPA Stable（inheritenv）和用户指定 GitHub 固定 commit（Codex）的 HTTPS 下载地址及 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从对应 HTTPS 源取得源码时记录的校验值，不是独立的签名验证。
 
 bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加载源码。`seq` 如内置版本已满足要求则直接使用 Emacs 自带实现。不要在此 profile 内用 package 菜单升级依赖；要更换版本应审阅锁文件并重新生成隔离包目录。删除 `.local/` 后重新运行 bootstrap 可恢复，但会清掉此配置自己的历史/自定义。个人 Emacs 配置不受影响。
 
-文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-lsp.el` 配置自动 Eglot，`lisp/lens-source-reading.el` 管理两语言单键，`lisp/lens-help.el` 维护快捷键与启动速查，`lisp/lens-packages.el` 维护主要包清单，`tests/review-test.el` 与 `tests/lsp-test.el` 是可重复的检查源码；LSP 检查只用一次性小项目，分别验证真实握手、符号、hover、定义/返回、引用和会话复用，不索引用户仓库。可运行 `./bin/code-lens --batch --load tests/lsp-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-real-automatic-language-servers))'` 重复真实 LSP 检查；`./bin/code-lens -nw --load tests/lsp-test.el --load tests/interactive-runner.el` 验证单键输入、关闭确认和短回答。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。新增检查覆盖实际多词匹配、文件/命令注释、Consult rg/ignore、版本清单和 scratch 保护。`bin/check-interactive` 在独立终端实例中用真实 minibuffer 验证行搜索、Clojure/OCaml imenu 和异步搜索跳转，自动结束，不操作现有 Emacs。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
+文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-lsp.el` 配置自动 Eglot，`lisp/lens-source-reading.el` 管理两语言单键，`lisp/lens-codex.el` 管理只读预设问答，`lisp/lens-help.el` 维护快捷键与启动速查，`lisp/lens-packages.el` 维护主要包清单，`tests/review-test.el` 与 `tests/lsp-test.el` 是可重复的检查源码；LSP 检查只用一次性小项目，分别验证真实握手、符号、hover、定义/返回、引用和会话复用，不索引用户仓库。可运行 `./bin/code-lens --batch --load tests/lsp-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-real-automatic-language-servers))'` 重复真实 LSP 检查；`./bin/code-lens -nw --load tests/lsp-test.el --load tests/interactive-runner.el` 验证单键输入、关闭确认和短回答。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。`tests/codex-test.el` 验证文件名捕获、发送取消、CLI/login 错误及权限；真实模型问答另需显式 `CODE_LENS_REAL_QA=1`，不会被 `bin/check` 自动运行。`tests/embark-test.el` 验证真实文件候选与异步搜索结果收集、浏览、跳转及 minibuffer 退出。新增检查覆盖实际多词匹配、文件/命令注释、Consult rg/ignore、版本清单和 scratch 保护。`bin/check-interactive` 在独立终端实例中用真实 minibuffer 验证行搜索、Clojure/OCaml imenu 和异步搜索跳转，自动结束，不操作现有 Emacs。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
 
-官方参考：[Magit](https://magit.vc/manual/magit.html)、[GNU ELPA](https://elpa.gnu.org/)、[NonGNU ELPA](https://elpa.nongnu.org/)、[Emacs xref](https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html)。
+官方参考：[Magit](https://magit.vc/manual/magit.html)、[GNU ELPA](https://elpa.gnu.org/)、[Embark / embark-consult](https://elpa.gnu.org/packages/embark-consult.html)、[NonGNU ELPA](https://elpa.nongnu.org/)、[Emacs xref](https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html)。

@@ -180,7 +180,7 @@
    (should (eq major-mode 'text-mode))
    (should-not (buffer-modified-p))
    (should (string-match-p "只读" (buffer-string)))
-   (should (string-match-p "手动" (buffer-string)))
+   (should (string-match-p "自动连接 Eglot" (buffer-string)))
    (should (string-match-p "当前文件" (buffer-string)))
    (should (string-match-p "bin/code-lens -nw" (buffer-string)))))
 

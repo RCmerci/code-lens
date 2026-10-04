@@ -85,8 +85,17 @@
    "  内置 Eglot：Clojure / OCaml 文件自动连接语言服务器，提供定义、引用与符号说明。\n"
    "  主题 modus-operandi-tinted；确认问题使用 y / n。\n\n"
    (lens-source-reading-help-text)
+   "\nCodex 当前文件问答\n"
+   "  c 使用 Vertico 选择预设；RET 发送，C-g 取消时不启动或发送。\n"
+   (mapconcat (lambda (template) (concat "  " (format template "当前文件名") "\n"))
+              lens-codex-prompt-templates "")
+   "  文件名来自按 c 的源 buffer；只附当前文件快照、路径、位置/选区。\n"
+   "  使用现有 Codex CLI 登录；只读沙箱 + on-request，保留审批提示。\n"
+   "  不安装 CLI、不登录、不改用户 hooks；解锁后 c 恢复普通输入。\n"
    "\n补全与预览\n"
    "  Vertico：C-n / C-p 选择候选，RET 确认，C-g 取消。\n"
+   "  minibuffer 内 C-c C-o：Embark 收集当前候选到独立 buffer。\n"
+   "  收集时原 minibuffer 自动退出；列表 n / p 浏览，RET 跳转，q 关闭。\n"
    "  Orderless：用空格分隔多个词，顺序不限；Marginalia 在候选旁显示说明。\n"
    "  Consult 搜索：#搜索表达式#结果过滤；输入后异步搜索，可预览跳转。\n"
    "  预览会打开相关文件；代码仍默认只读，相关语言 buffer 自动连接 Eglot。\n\n"

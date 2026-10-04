@@ -2,7 +2,9 @@
   "format": 1,
   "sources": [
     "https://elpa.gnu.org/packages/",
-    "https://elpa.nongnu.org/nongnu/"
+    "https://elpa.nongnu.org/nongnu/",
+    "https://stable.melpa.org/packages/",
+    "https://codeload.github.com/benthamite/codex/tar.gz/"
   ],
   "packages": [
     {
@@ -100,6 +102,39 @@
       "version": "5.3.0",
       "url": "https://elpa.gnu.org/packages/modus-themes-5.3.0.tar",
       "sha256": "bd1a6c34ebcd0d8d69ce669156006bd0d099281f6bd299db095ee0ee9a0da610"
+    },
+    {
+      "name": "inheritenv",
+      "version": "0.2",
+      "url": "https://stable.melpa.org/packages/inheritenv-0.2.tar",
+      "sha256": "03d478efd6d09adb552b753d09d8827ef5b6042bfe37f99de37a7fc782080f65"
+    },
+    {
+      "name": "eat",
+      "version": "0.9.4",
+      "url": "https://elpa.nongnu.org/nongnu/eat-0.9.4.tar",
+      "sha256": "14971fc562f0820794eb6af78beebc7dc3ba898221e785c2d272a9f0fccfc54a"
+    },
+    {
+      "name": "codex",
+      "version": "0.4.0",
+      "revision": "6981e418588a264bd41be0afba4084a8a72411ab",
+      "format": "github-tar.gz",
+      "filename": "codex-6981e418588a264bd41be0afba4084a8a72411ab.tar.gz",
+      "url": "https://codeload.github.com/benthamite/codex/tar.gz/6981e418588a264bd41be0afba4084a8a72411ab",
+      "sha256": "6c2affbaf651bbdc040a1f696a51e5ef0cbd6dc33fe24625b864cafa2301ac40"
+    },
+    {
+      "name": "embark",
+      "version": "1.2",
+      "url": "https://elpa.gnu.org/packages/embark-1.2.tar",
+      "sha256": "65e4553e709a9619016a635c435f648add310c75601b3b0818ca71c5b46678ea"
+    },
+    {
+      "name": "embark-consult",
+      "version": "1.2",
+      "url": "https://elpa.gnu.org/packages/embark-consult-1.2.tar",
+      "sha256": "963b6d722a3913ca6f5606dea6f12566c4c61e506fe00a3edeee579c8843d1d4"
     }
   ]
 }

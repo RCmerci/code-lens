@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 lens_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
-exec "$lens_root/bin/code-lens" --batch --load "$lens_root/tests/review-test.el" --funcall ert-run-tests-batch-and-exit
+exec "$lens_root/bin/code-lens" --batch --load "$lens_root/tests/codex-test.el" --load "$lens_root/tests/embark-test.el" --eval '(ert-run-tests-batch-and-exit (quote (and (not (tag interactive)) (not (tag external)))))'

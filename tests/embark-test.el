@@ -1,0 +1,112 @@
+;;; embark-test.el --- Real candidate collection checks -*- lexical-binding: t; -*-
+(require 'ert)
+(unless (ert-test-boundp 'lens-isolated-runtime)
+  (load (expand-file-name "tests/review-test.el" lens-root) nil t))
+
+(ert-deftest lens-embark-minibuffer-binding-scope ()
+  (should (package-installed-p 'embark '(1 2)))
+  (should (featurep 'embark-consult))
+  (should (eq (keymap-lookup minibuffer-local-map "C-c C-o") 'embark-collect))
+  (should-not (eq (keymap-lookup (current-global-map) "C-c C-o") 'embark-collect))
+  (should (eq (alist-get 'consult-grep embark-default-action-overrides) 'embark-consult-goto-grep)))
+
+(defun lens-test-collect-candidates (command input match)
+  "Invoke actual minibuffer binding once real Vertico candidates arrive."
+  (let ((before (buffer-list)) (deadline (+ (float-time) 10))
+        (this-command command) (real-this-command command) timer minibuffer inserted fired)
+    (unwind-protect
+        (condition-case nil
+            (minibuffer-with-setup-hook
+                (:append
+                 (lambda ()
+                   (setq minibuffer (current-buffer))
+                   (setq timer
+                         (run-at-time
+                          0.05 0.05
+                          (lambda ()
+                            (when (and (not fired) (buffer-live-p minibuffer)
+                                       (active-minibuffer-window))
+                              (with-current-buffer minibuffer
+                                (unless inserted
+                                  (delete-minibuffer-contents)
+                                  (insert input)
+                                  (setq inserted t))
+                                (vertico--update)
+                                (cond
+                                 ((> (float-time) deadline) (abort-recursive-edit))
+                                 ((cl-some (lambda (candidate) (string-match-p match candidate)) vertico--candidates)
+                                  (should (eq (key-binding (kbd "C-c C-o")) 'embark-collect))
+                                  (setq fired t)
+                                  (setq unread-command-events
+                                        (append (listify-key-sequence (kbd "C-c C-o")) unread-command-events)))))))))))
+              (call-interactively command))
+          (quit (setq quit-flag nil)))
+      (when timer (cancel-timer timer)))
+    ;; Embark's default collect exits the original minibuffer and then selects the snapshot.
+    (accept-process-output nil 0.05)
+    (should fired)
+    (should-not (active-minibuffer-window))
+    (or (cl-find-if (lambda (buffer)
+                      (and (not (memq buffer before))
+                           (with-current-buffer buffer (derived-mode-p 'embark-collect-mode))))
+                    (buffer-list))
+        (ert-fail "No real collection buffer"))))
+
+(ert-deftest lens-embark-interactive-files-and-search ()
+  :tags '(interactive)
+  (skip-unless (not noninteractive))
+  (lens-test-project
+   (let (collections)
+     (unwind-protect
+         (progn
+           (switch-to-buffer (find-file-noselect clj))
+           (let ((source (current-buffer)) (origin (point)))
+             (execute-kbd-macro (vconcat "f" (kbd "C-g")))
+             (setq quit-flag nil)
+             (should (eq (current-buffer) source))
+             (should (= origin (point)))
+             (should-not (active-minibuffer-window)))
+           (let ((collection (lens-test-collect-candidates #'project-find-file "review" "review.ml")))
+             (push collection collections)
+             (switch-to-buffer collection)
+             (should buffer-read-only)
+             (should (string-match-p "review.clj" (buffer-string)))
+             (should (string-match-p "review.ml" (buffer-string)))
+             (goto-char (point-min))
+             (execute-kbd-macro "n")
+             (let ((position (point)))
+               (execute-kbd-macro "n")
+               (should (/= (point) position))
+               (execute-kbd-macro "p")
+               (should (= position (point))))
+             (goto-char (point-min))
+             (search-forward "review.ml")
+             (goto-char (match-beginning 0))
+             (execute-kbd-macro (kbd "RET"))
+             (accept-process-output nil 0.05)
+             (let ((target (get-file-buffer ml)))
+               (should target)
+               (should (get-buffer-window target))
+               (with-current-buffer target (should buffer-read-only)))
+             (should (buffer-live-p collection)))
+           (with-current-buffer (get-file-buffer ml) (goto-char (point-max)))
+           (switch-to-buffer (find-file-noselect clj))
+           (let ((collection (lens-test-collect-candidates #'lens-consult-search "#answer#review.ml" "review.ml")))
+             (push collection collections)
+             (switch-to-buffer collection)
+             (should (string-match-p "review.ml" (buffer-string)))
+             (should-not (string-match-p "review.clj" (buffer-string)))
+             (goto-char (point-min))
+             (search-forward "answer")
+             (goto-char (match-beginning 0))
+             (execute-kbd-macro (kbd "RET"))
+             (accept-process-output nil 0.05)
+             (let ((target (get-file-buffer ml)))
+               (should (get-buffer-window target))
+               (with-current-buffer target
+                 (should (= (line-number-at-pos) 1))
+                 (should buffer-read-only)))
+             (should (buffer-live-p collection)))
+           (should (equal "" (with-temp-buffer (call-process "git" nil t nil "diff" "--") (buffer-string)))))
+       (dolist (collection collections)
+         (when (buffer-live-p collection) (kill-buffer collection)))))))
