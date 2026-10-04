@@ -2,6 +2,7 @@
 (require 'cl-lib)
 (require 'project)
 (require 'subr-x)
+(require 'vertico)
 ;; No editor-context injection, tool bridge/server, new login, or implicit write access.
 (setq codex-ide-model "gpt-6.1-sol"
       codex-ide-reasoning-effort "high"
@@ -40,19 +41,35 @@
       (list :buffer (current-buffer) :project project :file file :root root
             :relative-file (file-relative-name file root) :modified (buffer-modified-p)))))
 
+(defun lens-codex-accept-question (&optional raw-input)
+  "Accept a chosen preset or free input, without an implicit blank default.
+Vertico 2.15's locked candidate distinguishes explicit navigation from its
+initial automatic preselection.  M-RET retains Vertico's raw-input command."
+  (interactive "P")
+  (vertico-exit
+   (or raw-input
+       (and (string-empty-p (string-trim (minibuffer-contents-no-properties)))
+            (not (and (>= vertico--index 0) vertico--lock-candidate))))))
+
 (defun lens-codex-question ()
-  "Choose a preset for a project file; Codex reads its saved version from disk."
+  "Choose a preset or ask a free question about the captured saved project file."
   (interactive)
   (unless (and (bound-and-true-p lens-reading-mode) buffer-read-only (lens-eglot-language))
     (user-error "Code Lens: use c in a read-only Clojure/OCaml reading buffer"))
   (let* ((context (lens-codex-source-context))
          (file (plist-get context :relative-file))
          (choices (mapcar (lambda (template) (format template file)) lens-codex-prompt-templates))
-         (question (completing-read
-                    (if (plist-get context :modified)
-                        "Codex 当前文件问题（有未保存修改；仅读磁盘版本）: "
-                      "Codex 当前文件问题: ") choices nil t))
-         (prompt (format "从会话的项目根工作目录读取下面指定的项目内文件，按磁盘已保存版本回答。只回答代码问题；不要修改文件、应用补丁、执行写操作或读取其他文件。\n%s" question)))
+         (question (let ((vertico-map (copy-keymap vertico-map)))
+                     (keymap-set vertico-map "RET" #'lens-codex-accept-question)
+                     (completing-read
+                      (if (plist-get context :modified)
+                          "Codex 当前文件问题（有未保存修改；仅读磁盘版本）: "
+                        "Codex 当前文件问题: ") choices nil nil)))
+         (_ (when (string-empty-p (string-trim question))
+              (user-error "Code Lens: 问题不能为空；未启动或发送")))
+         (prompt (format "从会话的项目根工作目录读取下面指定的项目内文件，按磁盘已保存版本回答。只回答代码问题；不要修改文件、应用补丁、执行写操作或读取其他文件。\n%s"
+                         (if (member question choices) question
+                           (format "当前文件<%s>\n%s" file question)))))
     (prog1 (lens-codex-dispatch context prompt)
       (when (plist-get context :modified)
         (message "Code Lens: 不会保存或发送未保存修改；Codex 只读取磁盘已保存版本")))))

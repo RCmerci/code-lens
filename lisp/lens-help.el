@@ -89,10 +89,11 @@
    "  OCaml 语义层级含嵌套模块、类型、字段；Clojure namespace · 当前 defn。\n\n"
    (lens-source-reading-help-text)
    "\nCodex IDE 当前文件问答\n"
-   "  c 使用 Vertico 选择预设；RET 发送，C-g 取消时不启动或发送。\n"
+   "  c 使用 Vertico 选择预设或输入自由问题；RET 发送，M-RET 发送输入原文。\n"
    (mapconcat (lambda (template) (concat "  " (format template "src/foo/bar.ml") "\n"))
               lens-codex-prompt-templates "")
-   "  按 c 捕获源项目；模板使用完整项目内相对路径，不嵌入全文或选区。\n"
+   "  空白默认回车 / C-g 不启动或发送；预设可用 C-n / C-p 明确选择。\n"
+   "  按 c 捕获源项目；预设和自由问题均使用完整相对路径，不嵌入全文或选区。\n"
    "  Codex cwd 是对应项目根，自己读取磁盘版本；未保存修改不会保存或发送。\n"
    "  无文件 / 无项目 / 项目外或远程文件会提示并停止。\n"
    "  新 Code Lens 会话默认 gpt-6.1-sol / high；保留会话内显式覆盖。\n"

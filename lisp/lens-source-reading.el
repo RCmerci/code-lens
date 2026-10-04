@@ -8,7 +8,7 @@
     ("d" lens-source-definition "语义定义跳转")
     ("b" xref-go-back "返回跳转前位置")
     ("r" lens-source-references "语义引用")
-    ("c" lens-codex-question "选择当前文件预设问题，发给只读 Codex CLI")
+    ("c" lens-codex-question "选择预设或输入当前文件问题，发给只读 Codex CLI")
     ("f" project-find-file "项目文件选择（Vertico）")
     ("i" consult-imenu "定义索引")
     ("/" consult-line "当前 buffer 行搜索")
