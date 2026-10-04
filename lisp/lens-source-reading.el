@@ -32,6 +32,20 @@
                (lens-eglot-language))
     (setq lens-source-reading-keys-mode nil)))
 
+(defvar lens-ocaml-outline-keys-mode-map
+  (let ((map (make-sparse-keymap)))
+    (keymap-set map "o" #'ocaml-outline)
+    map))
+(define-minor-mode lens-ocaml-outline-keys-mode
+  "Expose o only in read-only OCaml reading buffers."
+  :lighter nil :keymap lens-ocaml-outline-keys-mode-map
+  (unless (and lens-source-reading-keys-mode (eq (lens-eglot-language) 'ocaml))
+    (setq lens-ocaml-outline-keys-mode nil)))
+(defun lens-sync-ocaml-outline-keys ()
+  (lens-ocaml-outline-keys-mode
+   (if (and lens-source-reading-keys-mode (eq (lens-eglot-language) 'ocaml)) 1 -1)))
+(add-hook 'lens-source-reading-keys-mode-hook #'lens-sync-ocaml-outline-keys)
+
 (defun lens-sync-source-reading-keys ()
   "Restore normal character input as soon as the source buffer is unlocked."
   (lens-source-reading-keys-mode
@@ -89,6 +103,7 @@
           (mapconcat (lambda (entry)
                        (format "  %-3s %s [%s]\n" (car entry) (nth 2 entry) (cadr entry)))
                      lens-source-reading-shortcuts "")
+          "  o   仅 OCaml：右侧结构大纲 [ocaml-outline]；需 Eglot，TAB 折叠，RET 跳转，q 关闭窗口。\n"
           "  C-c r e / C-x C-q 临时解锁后恢复普通字符输入；重新锁定再启用。\n"
           "  关闭 lens-reading-mode 同样恢复输入；t/d/r 需要已连接的语言服务器。\n"))
 (defun lens-source-reading-help ()

@@ -36,6 +36,7 @@
       xref-search-program (if (executable-find "rg") 'ripgrep 'grep))
 (menu-bar-mode 1)
 (when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(require 'lens-frame)
 (when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
 (require 'modus-themes)
 (mapc #'disable-theme custom-enabled-themes)
@@ -139,6 +140,7 @@
         magit-diff-refine-hunk t
         magit-save-repository-buffers nil))
 (require 'lens-navigation-display)
+(require 'lens-ocaml-outline)
 (require 'lens-help)
 (lens-install-bindings)
 (lens-configure-scratch)

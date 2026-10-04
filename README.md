@@ -83,7 +83,7 @@ Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`�
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-packages" "lens-lsp" "lens-codex" "lens-source-reading" "lens-navigation-display" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -171,8 +171,22 @@ bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加
 
 Pulsar 在成功定义 `d`、返回 `b`、索引 `i`、Consult 搜索定位后短暂高亮（4 × 0.04 秒）。普通光标移动、候选预览、取消和失败不触发。xref / Embark 原生 pulse 在这些源 buffer 内由一次 Pulsar 取代，避免重复闪动；其他 buffer 保留原生 xref 行为。
 
-Clojure / OCaml 文件空闲顶栏显示 Breadcrumb，代码结构先于项目路径，长路径只使用剩余宽度。OCaml 的 Eglot DocumentSymbol 范围可直接提供 `Outer > Inner > record_t > count`、variant 构造器、函数 / 局部绑定，以及 `.mli` 的 module / val / type 层级；同名函数按实际范围区分。Emacs 30.2 原生 Eglot 已保留这些范围；29.4 的旧 Eglot 会拍平层级，因此增加一个仅在本配置顶栏 buffer 生效的 DocumentSymbol → Imenu 兼容转换，直接保留原始节点及范围，不解析源码。Clojure LSP 返回 namespace 和 defn 平级范围，因此显示 `nav.core · alpha`：namespace 是 LSP 确认的文件上下文，`·` 不表示包围函数的范围。离开符号范围时不会把上一函数当成当前函数。
+Clojure / OCaml 文件空闲顶栏显示 Breadcrumb，只显示代码结构，隐藏项目、文件路径和文件名，例如 `asset_page > assets`。OCaml 的 Eglot DocumentSymbol 范围可直接提供 `Outer > Inner > record_t > count`、variant 构造器、函数 / 局部绑定，以及 `.mli` 的 module / val / type 层级；同名函数按实际范围区分。Emacs 30.2 原生 Eglot 已保留这些范围；29.4 的旧 Eglot 会拍平层级，因此增加一个仅在本配置顶栏 buffer 生效的 DocumentSymbol → Imenu 兼容转换，直接保留原始节点及范围，不解析源码。Clojure LSP 返回 namespace 和 defn 平级范围，因此显示 `nav.core · alpha`：namespace 是 LSP 确认的文件上下文，`·` 不表示包围函数的范围。离开符号范围时不会把上一函数当成当前函数。
 
 未连接 LSP 时显示 **[文本]**，使用原有 Imenu 文本近似索引；OCaml 仅顶层索引，不承诺嵌套范围、类型或字段。启动 / 关闭 Eglot 会清理 Breadcrumb 缓存，即使文件没有编辑。已有 header-line 或 which-function 显示会保留，避免增加重复顶栏；`M-x lens-breadcrumb-mode` 可关闭本配置顶栏。只作用于这些语言文件，不改变 Codex IDE 的 header。
 
 `tests/navigation-display-test.el` 包含结构、范围、顶栏兼容与真实 Pulsar overlay 检查；真实 LSP 使用一次性源码项目和现有服务器，不构建用户项目。可运行 `./bin/code-lens --batch --load tests/navigation-display-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-navigation-real-semantic-scopes))'` 检查真实范围，或 `CODE_LENS_NAVIGATION_ONLY=1 ./bin/check-interactive` 仅重跑独立终端的定义 / 返回 / 索引 / 搜索 / 移动 / 取消验证。更新后的配置在重新启动 Code Lens 时生效，未自动重载现有 GUI Emacs。
+
+### OCaml Outline 与自有源码依赖边界
+
+OCaml 只读阅读状态下按 **`o`** 调用 `ocaml-outline`，在右侧打开大纲并保留源窗口。大纲沿用现有实现的 LSP 符号树、类型标签、顶层行数、TAB 展开 / 折叠、`n` / `p` 浏览、RET 跳转、`g` 刷新和源光标位置跟随；`q` 关闭大纲窗口，源文件仍只读。未连接 Eglot 时明确提示用 `C-c r s` 连接 / 重试，不伪造语义大纲。Clojure 的 `o` 保持原行为；解锁或关闭阅读模式后 OCaml 的 `o` 恢复普通输入。
+
+实现源码已从用户原有 `~/.emacs.d/myown/ocaml-outline.el` 复制至受 Git 管理的 **`lisp/ocaml-outline.el`**，保留原内容，并在文件头记录来源及原文件 SHA-256；原配置未改动。`lisp/lens-ocaml-outline.el` 只加未连接提示与 Emacs 29 范围兼容接入；刷新时复用已有真实 DocumentSymbol 转换，已有 header-line / which-function 不影响大纲层级。
+
+Code Lens 的自有 Elisp 全部在本仓库内，**不依赖个人 `~/.emacs.d/`、其他 Mac 本地自定义 Elisp、外部配置目录或 symlink**。允许的运行依赖为 Emacs 29.1+ 内置库、`packages.lock.json` 声明并下载至仓库 `.local/profile/elpa/` 的第三方包，以及 PATH 中或显式指定的第三方可执行工具（Emacs、Git、rg、Codex、clojure-lsp、ocamllsp）。启动使用 `-Q`；配置、custom-file 和状态缓存均留在仓库 `.local/profile/`，不加载个人 init。Mac App 路径只是可执行程序查找的可选回退，其他系统可使用 PATH / `CODE_LENS_EMACS`。复制 / 克隆本仓库后运行 `bin/bootstrap` 即可安装锁定的包，自有 Outline 不从个人配置读取。
+
+`tests/ocaml-outline-test.el` 覆盖 o 键作用域、真实 LSP 结构 / 窗口 / 跳转 / 折叠 / 关闭与隔离启动的 Elisp 解析路径；可用 `CODE_LENS_OUTLINE_ONLY=1 ./bin/check-interactive` 重跑独立终端大纲测试；测试报告和所有运行缓存继续忽略，不发布个人配置或凭据。
+
+### 简洁窗口
+
+GUI Code Lens 隐藏图标工具栏与原生窗口标题栏，使用 `tool-bar-mode -1`、初始 / 新 frame 的 `tool-bar-lines=0` 与 `undecorated=t`；代码结构 Breadcrumb 保留，且不再显示项目或文件路径。macOS NS 后端在 [Emacs 29.4](https://github.com/emacs-mirror/emacs/blob/emacs-29.4/src/nsfns.m) 和 [30.2](https://github.com/emacs-mirror/emacs/blob/emacs-30.2/src/nsfns.m) 均实现 `undecorated` frame 参数。终端 frame 不应用图形装饰参数，不影响终端启动。配置只影响本隔离实例的 frame，不自动重载现有个人 Emacs。

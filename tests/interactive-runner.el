@@ -3,14 +3,16 @@
 (load (expand-file-name "tests/codex-test.el" lens-root) nil t)
 (load (expand-file-name "tests/embark-test.el" lens-root) nil t)
 (load (expand-file-name "tests/navigation-display-test.el" lens-root) nil t)
+(load (expand-file-name "tests/ocaml-outline-test.el" lens-root) nil t)
 (add-hook
  'emacs-startup-hook
  (lambda ()
    (run-at-time
     0.1 nil
     (lambda ()
-      (let ((selector (if (getenv "CODE_LENS_NAVIGATION_ONLY")
-                          '(tag navigation-interactive) '(tag interactive)))
+      (let ((selector (cond ((getenv "CODE_LENS_OUTLINE_ONLY") '(tag outline-interactive))
+                            ((getenv "CODE_LENS_NAVIGATION_ONLY") '(tag navigation-interactive))
+                            (t '(tag interactive))))
             (report (or (getenv "CODE_LENS_TEST_REPORT")
                         (expand-file-name "docs/test-reports/completion-interactive.log" lens-root))))
         (make-directory (file-name-directory report) t)
@@ -24,7 +26,7 @@
                                 (ert-stats-completed-unexpected stats)))
                 (insert (format "Vertico=%S Marginalia=%S Fido=%S\n"
                                 vertico-mode marginalia-mode fido-mode))
-                (insert "Codex dispatch mocked; no external question sent.\n")
+                (insert "No external Codex question sent by these tests.\n")
                 (insert (lens-primary-package-summary))
                 (dolist (test (ert-select-tests selector t))
                   (let ((result (ert-test-most-recent-result test)))

@@ -1,5 +1,7 @@
 ;;; navigation-display-test.el --- Scope and pulse integration -*- lexical-binding: t; -*-
-(load (expand-file-name "tests/review-test.el" lens-root) nil t)
+(require 'ert)
+(unless (ert-test-boundp 'lens-isolated-runtime)
+  (load (expand-file-name "tests/review-test.el" lens-root) nil t))
 (require 'lens-navigation-display)
 
 (ert-deftest lens-navigation-packages-and-header-compatibility ()
@@ -18,8 +20,9 @@
    (let ((header (lens-breadcrumb-header-text)))
      (should (string-match-p "\\[文本\\]" header))
      (should (string-match-p "answer" header))
-     (should (<= (string-width header) (window-body-width))))
-   ;; A long project path cannot consume the current definition's space.
+     (should (<= (string-width header) (window-body-width)))
+     (should-not (string-match-p "review.ml\\|long-project-directory-name" header)))
+   ;; A long project path is absent; only symbol structure is displayed.
    (let ((relative "long-project-directory-name/another-long-directory/deep/review.ml"))
      (make-directory (file-name-directory relative) t)
      (with-temp-file relative (insert "let answer x = x + 42\n"))
@@ -102,6 +105,7 @@
     (should (equal scope expected))
     (should (string-match-p (regexp-quote expected) header))
     (should-not (string-match-p "\\[文本\\]" header))
+    (should-not (string-match-p (regexp-quote (file-name-nondirectory buffer-file-name)) header))
     (message "REAL scope %s at %s: %s; header=%s"
              (file-name-nondirectory buffer-file-name) needle scope header)))
 
@@ -124,8 +128,8 @@
      (with-temp-file ".merlin" (insert "S .\nB .\n"))
      (with-temp-file "deps.edn" (insert "{:paths [\"src\"] :deps {}}\n"))
      (with-temp-file ".lsp/config.edn" (insert "{:source-paths [\"src\"] :project-specs []}\n"))
-     (with-temp-file "nested.ml" (insert lens-nav-ml))
-     (with-temp-file "nested.mli" (insert lens-nav-mli))
+     (with-temp-file "nested.ml" (insert lens-nav-ml "type asset_page = { assets : string list }\n"))
+     (with-temp-file "nested.mli" (insert lens-nav-mli "type asset_page = { assets : string list }\n"))
      (with-temp-file "src/nav/core.clj"
        (insert "(ns nav.core)\n(defn alpha [x] (+ x 1))\n\n(defn beta [x] (* x 2))\n"))
      (unwind-protect
@@ -155,6 +159,9 @@
                    (lens-nav-expect "worker" "Outer > Inner > worker")
                    (lens-nav-expect "outside" "Outer > outside")
                    (lens-nav-expect "top" "top")
+                   (lens-nav-expect "assets : string" "asset_page > assets")
+                   (should (equal (string-trim (substring-no-properties (lens-breadcrumb-header-text)))
+                                  "asset_page > assets"))
                    ;; A blank line after shared stays inside Inner, not shared.
                    (goto-char (point-min)) (search-forward "shared")
                    (forward-line 1)

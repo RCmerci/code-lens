@@ -18,6 +18,10 @@
       inhibit-startup-screen t
       initial-scratch-message nil
       create-lockfiles nil)
+;; Defaults cover initial and later GUI frames; no user init is loaded.
+(dolist (parameter '((tool-bar-lines . 0) (undecorated . t)))
+  (setf (alist-get (car parameter) initial-frame-alist) (cdr parameter)
+        (alist-get (car parameter) default-frame-alist) (cdr parameter)))
 (make-directory user-emacs-directory t)
 (when (and (fboundp 'startup-redirect-eln-cache)
            (boundp 'native-comp-eln-load-path))

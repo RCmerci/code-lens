@@ -3,8 +3,7 @@
 (require 'pulsar)
 (require 'cl-lib)
 
-(setq breadcrumb-imenu-max-length 0.65
-      breadcrumb-project-max-length 0.25
+(setq breadcrumb-imenu-max-length 0.95
       breadcrumb-idle-time 0.5
       pulsar-delay 0.04
       pulsar-iterations 4
@@ -12,6 +11,9 @@
       pulsar-pulse-functions nil
       pulsar-pulse-region-functions nil
       pulsar-pulse-on-window-change nil)
+
+(defvar lens-ocaml-outline-request nil
+  "Non-nil while the repo-owned OCaml outline requests actual symbol ranges.")
 
 (defconst lens-breadcrumb-header '(:eval (lens-breadcrumb-header-text)))
 
@@ -29,24 +31,19 @@ A namespace declaration is file context, not a range enclosing defns."
       (when (= (length names) 1) (car names)))))
 
 (defun lens-breadcrumb-header-text ()
-  "Display actual symbol scope first and project path second.
+  "Display only actual symbol scope, without project paths or file names.
 Without Eglot the native textual Imenu approximation is explicitly labelled."
   (let* ((scope (or (breadcrumb-imenu-crumbs) ""))
          (namespace (lens-breadcrumb-namespace))
-         (width (max 20 (window-body-width)))
          (structure (concat
                      (unless (bound-and-true-p eglot--managed-mode) "[文本] ")
                      (when (and namespace
                                 (not (equal (substring-no-properties scope)
                                             (substring-no-properties namespace))))
                        (concat namespace " · "))
-                     scope))
-         (path (breadcrumb-project-crumbs))
-         (structure (truncate-string-to-width structure (floor (* width 0.70)) nil nil "…"))
-         (remaining (max 0 (- width (string-width structure) 6))))
-    (concat " " structure
-            (when (and path (> remaining 8))
-              (concat "  |  " (truncate-string-to-width path remaining nil nil "…"))))))
+                     scope)))
+    (truncate-string-to-width (concat " " structure)
+                              (max 1 (window-body-width)) nil nil "…")))
 
 (define-minor-mode lens-breadcrumb-mode
   "Use Breadcrumb in language files that do not already own a header line.
@@ -76,7 +73,8 @@ Compatibility for Emacs 29 Eglot, which otherwise flattens these nodes."
   "Retain DocumentSymbol hierarchy in old Eglot for supported header buffers.
 New Eglot supplies these range properties itself.  SymbolInformation servers
 retain their native index; no hierarchy is inferred from source text."
-  (if (and lens-breadcrumb-mode (lens-eglot-language)
+  (if (and (or lens-breadcrumb-mode lens-ocaml-outline-request)
+           (lens-eglot-language)
            (not (fboundp 'eglot--imenu-DocumentSymbol)))
       (let ((symbols (jsonrpc-request
                       (eglot-current-server) :textDocument/documentSymbol

@@ -14,7 +14,7 @@
     (embark "将当前候选收集到独立 buffer")
     (embark-consult "Consult 收集结果跳转与预览")
     (pulsar "成功跳转后的短暂定位高亮")
-    (breadcrumb "项目路径与当前位置的代码结构层级")
+    (breadcrumb "当前位置的代码结构层级")
     (modus-themes "modus-operandi-tinted 浅色主题")
     (codex-ide "当前文件预设问答；原生 Codex IDE，只读 CLI"))
   "Primary third-party features; builtin packages and support dependencies are omitted.")

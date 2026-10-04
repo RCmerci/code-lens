@@ -83,9 +83,9 @@
    "方括号内是实际 keymap 中的命令名；M-x 也可调用。\n\n"
    (lens-primary-package-summary)
    "  内置 Eglot：Clojure / OCaml 文件自动连接语言服务器，提供定义、引用与符号说明。\n"
-   "  主题 modus-operandi-tinted；确认问题使用 y / n。\n"
+   "  主题 modus-operandi-tinted；确认问题使用 y / n；GUI 隐藏图标工具栏和窗口标题栏。\n"
    "  Pulsar：成功定义 / 返回 / 索引 / 搜索跳转短暂高亮；普通光标移动不闪。\n"
-   "  Breadcrumb：顶栏优先代码层级，后接项目路径；[文本] 表示近似索引。\n"
+   "  Breadcrumb：顶栏只显示代码层级，无项目 / 文件路径；[文本] 表示近似索引。\n"
    "  OCaml 语义层级含嵌套模块、类型、字段；Clojure namespace · 当前 defn。\n\n"
    (lens-source-reading-help-text)
    "\nCodex IDE 当前文件问答\n"
