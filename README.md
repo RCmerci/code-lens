@@ -1,6 +1,6 @@
 # Code Lens
 
-一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Embark、embark-consult、Modus Themes、Codex，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
+一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Embark、embark-consult、Modus Themes、Codex IDE，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
 
 ## 启动
 
@@ -126,16 +126,21 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 
 两语言只读阅读状态下按 `c`，Vertico 显示两个预设；`RET` 确认并发送，`C-g` 取消时不启动 CLI、不发问题：
 
-- `给我当前文件<实际文件名>中最重要的glossary的解释`
-- `给我解释当前文件<实际文件名>中最重要的几个类型和函数`
+- `给我当前文件<src/foo/bar.ml>中最重要的glossary的解释`
+- `给我解释当前文件<src/foo/bar.mli>中最重要的几个类型和函数`
 
-预设统一维护在 `lens-codex-prompt-templates`。文件名从按 `c` 时的源 `buffer-file-name` 捕获，保留实际 `.clj/.cljc/.ml/.mli` 扩展名及 Unicode/空格，不猜测接口文件；无文件 buffer 会提示并停止。消息附上源文件绝对路径、项目路径、光标行列、选区范围以及**整个当前 buffer 的快照（含未保存输入）**；不会自动附上项目其他文件。确认前请知道这些内容会经现有 Codex CLI 发送给其模型服务。源码正文、光标和只读状态不变，解锁后 `c/f` 都恢复普通字符输入。
+预设统一维护在 `lens-codex-prompt-templates`。在按 `c` 时捕获源 buffer 和项目，将占位符替换为相对于项目根的**完整文件路径**，如 `src/foo/bar.ml`；同名不同目录不会混淆，保留实际扩展名及 Unicode/空格，不猜测接口文件。消息只含读取已保存文件的要求和所选问题，**不嵌入 buffer/file 全文或选区代码，不附绝对路径**。Codex 会话工作目录指向捕获的项目根，并仅复用同项目的专属 QA 会话；复用前也核对实际会话目录。QA buffer 的名字通过新包公开 `buffer-name-function` 包含完整项目根，避免同名项目的 buffer 冲突。
 
-使用用户指定的 [benthamite/codex](https://github.com/benthamite/codex/tree/6981e418588a264bd41be0afba4084a8a72411ab)，锁定版本 0.4.0 / commit `6981e418588a264bd41be0afba4084a8a72411ab`。采用原生 `app-server` backend，无需终端模拟或 vterm；Eat 是该包声明的依赖，已安装但此 backend 不使用。每个项目复用名为 `lens-qa` 的专属会话。
+Codex 自己从磁盘读取该文件。未保存修改不会偷偷保存或发送：选择提示会明确显示“有未保存修改；仅读磁盘版本”，发送后也给出提示，不能让 Codex 读到 Emacs 中尚未保存的内容。源码正文、光标和只读状态保持不变，解锁后 `c/f` 恢复普通输入。当前支持已保存、可读的本地项目文件；无文件、未保存的新文件、无已识别项目、项目外文件（含指向项目外的符号链接）或远程文件，均明确提示并停止，不猜路径或发送问题。
 
-需要 PATH 中已有 `codex` CLI 和已有登录；配置不安装 CLI、不自动登录、不创建凭据。缺少 CLI 或登录时给出明确提示；自行完成 `codex login` 后重试。QA 会话使用服务 `model/list` 公布的默认模型（没有默认标志时选第一项）及其默认 reasoning effort，只覆盖该会话，避免 CLI 全局模型不支持当前登录类型；不修改全局 Codex 配置。首次问题等到服务回应确认 `read-only` 沙箱与 `on-request` 后发送，每次新 turn 同样检查权限，不启用 full-auto 或自动批准。只读沙箱限制写入，不限制所有读取，消息也明确要求不读其他文件。
+使用用户指定的 [dgillis/emacs-codex-ide](https://github.com/dgillis/emacs-codex-ide/tree/5eba84dd58ad8609e8f7e8c4159d4aac90b4f303)，锁定版本 **0.3.2** / commit `5eba84dd58ad8609e8f7e8c4159d4aac90b4f303`。它声明支持 Emacs 28.1+，依赖 Transient 0.9.0+，两版现有 Transient 0.13.8 满足要求。原生 `codex app-server` 会话显示为 Emacs buffer，无需 Eat、vterm 或终端模拟。`c` 使用公开 `codex-ide` 启动 API 和 `codex-ide-transcript-submit-prompt-to-session` 精确提交到捕获项目的 session，提交时 `:suppress-context t`；配置通过包的公开 session override API 设置。固定版本的模型元数据查询和 `thread/start` 协议回应校验使用已审阅的内部 helper，随包版本锁定。
 
-禁用该 Emacs 包的 hooks 安装、通知和 transcript 回读，不修改用户 `~/.codex/config.toml` / hooks，不扫描私有 session 文件。CLI 自己仍按其既有配置运行并可记录本次新会话。问答测试仅发送一次性合成代码；普通检查与终端候选测试不发外部问题。
+需要 PATH 中已有 `codex` CLI 和已有登录；配置不安装 CLI、不自动登录、不创建凭据。缺少 CLI 或登录时给出明确提示；自行完成 `codex login` 后重试。QA 会话选择服务 `model/list` 公布的默认模型（没有默认标志时选第一项）及其默认 reasoning effort，只覆盖该会话；不修改全局 Codex 配置。首次问题等到服务回应确认正确项目 cwd、`read-only` 沙箱与 `on-request` 后发送，复用前再次核对项目和当前权限设置。会话忙时给出等待提示，避免另一文件的问题意外 steer 正在回答的 turn；不自动批准命令或文件编辑。
+
+新包的默认 sandbox 是 `workspace-write`、Emacs context policy 是 `all`，本配置明确覆写为只读并关闭全部自动 context/baseline。可选 Emacs MCP bridge 关闭，不启动 Emacs server、不授予模型额外 editor/tool 访问。只读沙箱限制写入，不限制所有读取；消息要求仅读指定文件的已保存版本。旧 benthamite/codex、Eat、inheritenv 已退出锁文件和包清单，其隔离包源码移到 `.local/retired-packages/` 保留恢复；缓存仍保留，未删除用户聊天记录或认证数据。
+
+不改用户 `~/.codex/config.toml` / hooks，也不选择、恢复或读取私有旧会话。CLI 自己仍按其既有配置运行并可记录本次新会话。真实问答检查仅发送一次性合成项目的相对路径问题，由 Codex 自行读取合成文件；普通检查与候选选择测试不发外部问题。换包后建议重新运行启动器；本次没有操作或重载现有用户 Emacs。
+
 
 ## 文本导航与语义导航
 
@@ -150,9 +155,9 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 
 ## 包与维护
 
-主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**、Embark **1.2**、embark-consult **1.2**、Codex **0.4.0**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
+主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**、Embark **1.2**、embark-consult **1.2**、Codex IDE **0.3.2**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
 
-`packages.lock.json` 包含全部外部依赖的准确版本、GNU/NonGNU ELPA、MELPA Stable（inheritenv）和用户指定 GitHub 固定 commit（Codex）的 HTTPS 下载地址及 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从对应 HTTPS 源取得源码时记录的校验值，不是独立的签名验证。
+`packages.lock.json` 包含全部外部依赖的准确版本、GNU/NonGNU ELPA 和用户指定 GitHub 固定 commit（Codex IDE）的 HTTPS 下载地址及 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从对应 HTTPS 源取得源码时记录的校验值，不是独立的签名验证。
 
 bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加载源码。`seq` 如内置版本已满足要求则直接使用 Emacs 自带实现。不要在此 profile 内用 package 菜单升级依赖；要更换版本应审阅锁文件并重新生成隔离包目录。删除 `.local/` 后重新运行 bootstrap 可恢复，但会清掉此配置自己的历史/自定义。个人 Emacs 配置不受影响。
 

@@ -33,15 +33,20 @@ for package in lock['packages']:
     if hashlib.sha256(path.read_bytes()).hexdigest() != package['sha256']:
         raise SystemExit(f'Checksum mismatch: {path}; remove this cached file and retry')
     if package.get('format') == 'github-tar.gz':
-        # Repackage only reviewed Codex modules from the verified immutable archive.
-        prefix = f"codex-{package['revision']}/"
-        target = CACHE / f"codex-{package['version']}.tar"
-        modules = ('codex.el', 'codex-app-server.el', 'codex-eat.el', 'codex-vterm.el')
+        # Repackage the reviewed top-level modules from a verified immutable archive.
+        prefix = f"{package['archive-root']}-{package['revision']}/"
+        target = CACHE / f"{package['name']}-{package['version']}.tar"
+        modules = package['modules']
+        if any('/' in name or not name.endswith('.el') for name in modules):
+            raise SystemExit('Only top-level Elisp modules are supported')
         with tarfile.open(path, 'r:gz') as source, tarfile.open(target, 'w') as output:
             files = {name: source.extractfile(prefix + name).read() for name in modules}
-            files['codex-pkg.el'] = b'(define-package "codex" "0.4.0" "Emacs integration for OpenAI Codex CLI" \'((emacs "28.1") (transient "0.9.3") (inheritenv "0.2") (eat "0.9.4")))\n'
+            deps = ' '.join(f'({name} "{version}")' for name, version in package['dependencies'].items())
+            files[f"{package['name']}-pkg.el"] = (
+                f'(define-package "{package["name"]}" "{package["version"]}" "Locked upstream source" \'({deps}))\n'
+            ).encode()
             for name, data in files.items():
-                info = tarfile.TarInfo(f"codex-{package['version']}/{name}")
+                info = tarfile.TarInfo(f"{package['name']}-{package['version']}/{name}")
                 info.size, info.mode, info.mtime = len(data), 0o644, 0
                 output.addfile(info, io.BytesIO(data))
         path = target

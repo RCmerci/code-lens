@@ -1,143 +1,133 @@
-;;; lens-codex.el --- Current-file read-only Codex questions -*- lexical-binding: t; -*-
+;;; lens-codex.el --- Saved project-file questions via Codex IDE -*- lexical-binding: t; -*-
 (require 'cl-lib)
 (require 'project)
 (require 'subr-x)
-;; Set these before loading the package: no personal hook/config/server setup.
-(setq codex-enable-hooks nil
-      codex-enable-notifications nil
-      codex-transcript-catch-up-on-stop nil
-      codex-hooks-config-path (expand-file-name "codex-disabled-config.toml" user-emacs-directory)
-      codex-hooks-json-path (expand-file-name "codex-disabled-hooks.json" user-emacs-directory)
-      codex-transcript-sessions-directory (expand-file-name "codex-unused-transcripts/" user-emacs-directory)
-      codex-terminal-backend 'app-server
-      codex-sandbox-mode 'read-only
-      codex-approval-policy 'on-request
-      codex-full-auto nil)
-(require 'codex)
-
+;; No editor-context injection, tool bridge/server, new login, or implicit write access.
+(setq codex-ide-sandbox-mode "read-only"
+      codex-ide-approval-policy "on-request"
+      codex-ide-emacs-context-policy nil
+      codex-ide-session-baseline-prompt nil
+      codex-ide-enable-emacs-tool-bridge nil
+      codex-ide-want-mcp-bridge nil)
+(require 'codex-ide)
 (defcustom lens-codex-program "codex"
-  "Existing Codex CLI executable; this profile never installs or logs it in."
-  :type 'string :group 'codex)
+  "Existing CLI executable; this profile does not install or log it in."
+  :type 'string :group 'codex-ide)
 (defconst lens-codex-prompt-templates
   '("给我当前文件<%s>中最重要的glossary的解释"
     "给我解释当前文件<%s>中最重要的几个类型和函数")
-  "Preset questions, expanded with the source buffer's actual file name.")
+  "Preset questions expanded with the captured project's relative file path.")
 (defvar lens-codex-launch-p nil)
-(defvar lens-codex-initial-question nil)
-(defvar-local lens-codex-pending-question nil)
-(defvar-local lens-codex-session-p nil)
+(defvar lens-codex-sessions (make-hash-table :test 'equal))
+(defvar lens-codex-permissions (make-hash-table :test 'eq))
 
 (defun lens-codex-source-context ()
-  "Capture file, project, point, selection and current-file text before UI changes."
+  "Capture the source and its saved local file's project-relative path before UI changes."
   (unless buffer-file-name (user-error "Code Lens: this buffer has no file; no question sent"))
-  (let* ((file (expand-file-name buffer-file-name))
-         (project (project-current nil (file-name-directory file))))
-    (list :file file :root (file-name-as-directory
-                           (file-truename (if project (project-root project) (file-name-directory file))))
-          :line (line-number-at-pos) :column (current-column)
-          :region (when (use-region-p) (list (region-beginning) (region-end)))
-          :text (buffer-substring-no-properties (point-min) (point-max)))))
+  (when (file-remote-p buffer-file-name)
+    (user-error "Code Lens: Codex QA supports saved local project files only"))
+  (unless (and (file-regular-p buffer-file-name) (file-readable-p buffer-file-name))
+    (user-error "Code Lens: save this file to disk before asking Codex; nothing saved or sent"))
+  (let* ((file (file-truename buffer-file-name))
+         (project (project-current nil (file-name-directory buffer-file-name))))
+    (unless project
+      (user-error "Code Lens: this file has no recognized project; no question sent"))
+    (let ((root (file-name-as-directory (file-truename (project-root project)))))
+      (unless (file-in-directory-p file root)
+        (user-error "Code Lens: this file is outside the project (including symlink targets); no question sent"))
+      (list :buffer (current-buffer) :project project :file file :root root
+            :relative-file (file-relative-name file root) :modified (buffer-modified-p)))))
 
 (defun lens-codex-question ()
-  "Choose a preset question for the current file, then send it to read-only Codex."
+  "Choose a preset for a project file; Codex reads its saved version from disk."
   (interactive)
   (unless (and (bound-and-true-p lens-reading-mode) buffer-read-only (lens-eglot-language))
     (user-error "Code Lens: use c in a read-only Clojure/OCaml reading buffer"))
   (let* ((context (lens-codex-source-context))
-         (file (plist-get context :file))
-         (choices (mapcar (lambda (template) (format template (file-name-nondirectory file)))
-                          lens-codex-prompt-templates))
-         (question (completing-read "Codex 当前文件问题: " choices nil t))
-         (prompt (format "只回答代码问题；不要修改文件、应用补丁、执行写操作或读取其他文件。\n%s\n\nProject: %s\nCurrent file: %s\nPosition: line %d, column %d\nSelection character bounds: %S\n\nCurrent-file buffer snapshot (including unsaved text):\n%s"
-                         question (plist-get context :root) file
-                         (plist-get context :line) (plist-get context :column)
-                         (plist-get context :region) (plist-get context :text))))
-    (lens-codex-dispatch context prompt)))
+         (file (plist-get context :relative-file))
+         (choices (mapcar (lambda (template) (format template file)) lens-codex-prompt-templates))
+         (question (completing-read
+                    (if (plist-get context :modified)
+                        "Codex 当前文件问题（有未保存修改；仅读磁盘版本）: "
+                      "Codex 当前文件问题: ") choices nil t))
+         (prompt (format "从会话的项目根工作目录读取下面指定的项目内文件，按磁盘已保存版本回答。只回答代码问题；不要修改文件、应用补丁、执行写操作或读取其他文件。\n%s" question)))
+    (prog1 (lens-codex-dispatch context prompt)
+      (when (plist-get context :modified)
+        (message "Code Lens: 不会保存或发送未保存修改；Codex 只读取磁盘已保存版本")))))
 
-(defun lens-codex-session-settings ()
-  "Mark only sessions launched by this adapter and keep asynchronous settings local."
-  (when lens-codex-launch-p
-    (setq-local lens-codex-session-p t)
-    (setq-local lens-codex-pending-question lens-codex-initial-question)
-    (setq-local codex-sandbox-mode 'read-only)
-    (setq-local codex-approval-policy 'on-request)
-    (setq-local codex-full-auto nil)))
-(add-hook 'codex-start-hook #'lens-codex-session-settings)
+(defun lens-codex-owned-session-p (session)
+  "Return non-nil only for this adapter's exact project session object."
+  (and (codex-ide-session-p session)
+       (eq session (gethash (file-name-as-directory (codex-ide-session-directory session))
+                           lens-codex-sessions))))
 
-(defun lens-codex-initialize-model (continue &rest args)
-  "Select the server-advertised default before an owned QA thread starts.
-This overrides only the session, leaving the user's CLI configuration alone."
-  (if (not lens-codex-session-p) (apply continue args)
-    (codex--app-server-send-request
-     "model/list" '((limit . 50))
-     (lambda (result error)
-       (let* ((models (append (alist-get 'data result) nil))
-              (model (or (cl-find-if (lambda (m) (eq (alist-get 'isDefault m) t)) models)
-                         (car models)))
-              (id (alist-get 'model model)))
-         (if (or error (not (stringp id)))
-             (progn
-               (setq lens-codex-pending-question nil)
-               (codex--app-server-insert-status "Code Lens: no advertised model available; no question sent"))
-           (setq-local codex-model id)
-           (setq-local codex-reasoning-effort (alist-get 'defaultReasoningEffort model))
-           (apply continue args)))))))
-(advice-add 'codex--app-server-after-initialize :around #'lens-codex-initialize-model)
+(defun lens-codex-session-event (event session payload)
+  "Use the package lifecycle hook and public per-session config API."
+  (when (and (eq event 'created) lens-codex-launch-p)
+    (puthash (file-name-as-directory (codex-ide-session-directory session)) session lens-codex-sessions)
+    (codex-ide-config-set-session-value 'sandbox-mode "read-only" session)
+    (codex-ide-config-set-session-value 'approval-policy "on-request" session))
+  (when (and (lens-codex-owned-session-p session) (eq event 'status-changed)
+             (eq (plist-get payload :reason) 'initialized))
+    ;; Pinned metadata helper: query advertised models before the first thread/start.
+    (let* ((models (codex-ide--list-models session))
+           (model (or (cl-find-if (lambda (m) (eq (alist-get 'isDefault m) t)) models) (car models)))
+           (id (alist-get 'model model)))
+      (unless (stringp id) (user-error "Code Lens: no advertised Codex model; no question sent"))
+      (codex-ide-config-set-session-value 'model id session)
+      (codex-ide-config-set-session-value 'reasoning-effort (alist-get 'defaultReasoningEffort model) session))))
+(add-hook 'codex-ide-session-event-hook #'lens-codex-session-event)
 
-(defun lens-codex-without-transcript-path (args)
-  "Avoid reading private session transcripts when a fresh QA thread starts."
-  (if (not lens-codex-session-p) args
-    (let ((params (copy-tree (car args))))
-      (setf (alist-get 'path (alist-get 'thread params)) nil)
-      (cons params (cdr args)))))
-(advice-add 'codex--app-server-thread-started :filter-args #'lens-codex-without-transcript-path)
+(defun lens-codex-confirm-thread (request session method params)
+  "Check the pinned protocol's thread/start reply before any source question is sent."
+  (let ((result (funcall request session method params)))
+    (when (and (lens-codex-owned-session-p session) (equal method "thread/start"))
+      (let* ((sandbox (or (alist-get 'sandboxPolicy result) (alist-get 'sandbox result)))
+             (kind (if (stringp sandbox) sandbox (alist-get 'type sandbox)))
+             (cwd (alist-get 'cwd (alist-get 'thread result)))
+             (root (file-name-as-directory (codex-ide-session-directory session))))
+        (unless (and (member kind '("readOnly" "read-only"))
+                     (equal (alist-get 'approvalPolicy result) "on-request")
+                     (stringp cwd) (equal root (file-name-as-directory (file-truename cwd))))
+          (user-error "Code Lens: server has not confirmed this project's read-only/on-request session; no question sent"))
+        (puthash session t lens-codex-permissions)))
+    result))
+(advice-add 'codex-ide--request-sync :around #'lens-codex-confirm-thread)
 
-(defun lens-codex-check-turn-permissions (&rest _)
-  "Refuse QA turns unless the server confirms read-only and explicit approvals."
-  (when lens-codex-session-p
-    (let* ((settings codex--app-server-effective-permissions)
-           (sandbox (alist-get 'sandboxPolicy settings))
-           (kind (if (stringp sandbox) sandbox (alist-get 'type sandbox))))
-      (unless (and (member kind '("readOnly" "read-only"))
-                   (equal (alist-get 'approvalPolicy settings) "on-request"))
-        (user-error "Code Lens: session has not confirmed read-only/on-request; no question sent")))))
-(advice-add 'codex--app-server-send-turn-start :before #'lens-codex-check-turn-permissions)
+(defun lens-codex-check-session (session root)
+  "Refuse wrong-project or unconfirmed sessions and changed permission settings."
+  (unless (and (lens-codex-owned-session-p session) (gethash session lens-codex-permissions)
+               (equal root (file-name-as-directory (file-truename (codex-ide-session-directory session))))
+               (equal (codex-ide-config-effective-value 'sandbox-mode session) "read-only")
+               (equal (codex-ide-config-effective-value 'approval-policy session) "on-request"))
+    (user-error "Code Lens: QA session project/permissions do not match; no question sent")))
 
-(defun lens-codex-send-initial-question (&rest _)
-  "Wait for confirmed thread/start permissions before sending the captured question.
-The early thread/started notification may omit permission settings."
-  (when (and lens-codex-session-p lens-codex-pending-question
-             (assq 'approvalPolicy codex--app-server-effective-permissions)
-             (assq 'sandboxPolicy codex--app-server-effective-permissions))
-    (lens-codex-check-turn-permissions)
-    (let ((prompt lens-codex-pending-question))
-      (setq lens-codex-pending-question nil)
-      (codex--send-command-to-buffer prompt (current-buffer)))))
-(advice-add 'codex--app-server-thread-started :after #'lens-codex-send-initial-question)
+(defun lens-codex-buffer-name (directory)
+  "Give QA buffers distinct names even when two projects share a basename."
+  (format "*codex-ide-qa:%s*" (abbreviate-file-name (file-truename directory))))
 
 (defun lens-codex-dispatch (context prompt)
-  "Send PROMPT via the pinned package API, reusing only this adapter's QA session."
+  "Start through `codex-ide' and submit to its exact session via the public API."
   (let* ((program (executable-find lens-codex-program))
          (root (plist-get context :root))
-         (name (codex--buffer-name-for-directory root "lens-qa"))
-         (buffer (get-buffer name)))
-    (unless program
-      (user-error "Code Lens: Codex CLI is missing from PATH; no question sent"))
+         (session (gethash root lens-codex-sessions)))
+    (unless program (user-error "Code Lens: Codex CLI is missing from PATH; no question sent"))
     (unless (zerop (call-process program nil nil nil "login" "status"))
-      (user-error "Code Lens: Codex CLI is not logged in; log in separately with codex login, then retry c"))
-    (if (and buffer (codex--buffer-process-live-p buffer))
-        (with-current-buffer buffer
-          (unless lens-codex-session-p
-            (user-error "Code Lens: this session is not an owned read-only QA session"))
-          (lens-codex-check-turn-permissions)
-          (codex--send-command-to-buffer prompt buffer)
-          (pop-to-buffer buffer))
-      (let ((codex-program program) (lens-codex-launch-p t)
-            (lens-codex-initial-question prompt)
-            (codex-terminal-backend 'app-server)
-            (codex-sandbox-mode 'read-only) (codex-approval-policy 'on-request)
-            (codex-full-auto nil) (codex-enable-hooks nil))
-        (codex-start-session :directory root :instance-name "lens-qa"
-                             :terminal-backend 'app-server)))))
+      (user-error "Code Lens: CLI is not logged in; run codex login separately, then retry c"))
+    (unless (and session (process-live-p (codex-ide-session-process session))
+                 (buffer-live-p (codex-ide-session-buffer session)))
+      ;; A temporary root buffer prevents a switched minibuffer target from changing the project.
+      (with-temp-buffer
+        (setq default-directory root)
+        (let ((codex-ide-cli-path program) (lens-codex-launch-p t)
+              (codex-ide-buffer-name-function #'lens-codex-buffer-name)
+              (codex-ide-want-mcp-bridge nil) (codex-ide-enable-emacs-tool-bridge nil))
+          (setq session (codex-ide)))))
+    (lens-codex-check-session session root)
+    (when (codex-ide-session-current-turn-id session)
+      (user-error "Code Lens: QA is still answering; wait before sending another file question"))
+    (codex-ide-transcript-submit-prompt-to-session session prompt :suppress-context t)
+    (pop-to-buffer (codex-ide-session-buffer session))
+    (codex-ide-session-buffer session)))
 
 (provide 'lens-codex)
