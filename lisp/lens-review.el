@@ -138,6 +138,7 @@
   (setq magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1
         magit-diff-refine-hunk t
         magit-save-repository-buffers nil))
+(require 'lens-navigation-display)
 (require 'lens-help)
 (lens-install-bindings)
 (lens-configure-scratch)

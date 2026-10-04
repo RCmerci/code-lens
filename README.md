@@ -83,7 +83,7 @@ Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`�
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-packages" "lens-lsp" "lens-codex" "lens-source-reading" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-lsp" "lens-codex" "lens-source-reading" "lens-navigation-display" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -133,9 +133,9 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 
 Codex 自己从磁盘读取该文件。未保存修改不会偷偷保存或发送：选择提示会明确显示“有未保存修改；仅读磁盘版本”，发送后也给出提示，不能让 Codex 读到 Emacs 中尚未保存的内容。源码正文、光标和只读状态保持不变，解锁后 `c/f` 恢复普通输入。当前支持已保存、可读的本地项目文件；无文件、未保存的新文件、无已识别项目、项目外文件（含指向项目外的符号链接）或远程文件，均明确提示并停止，不猜路径或发送问题。
 
-使用用户指定的 [dgillis/emacs-codex-ide](https://github.com/dgillis/emacs-codex-ide/tree/5eba84dd58ad8609e8f7e8c4159d4aac90b4f303)，锁定版本 **0.3.2** / commit `5eba84dd58ad8609e8f7e8c4159d4aac90b4f303`。它声明支持 Emacs 28.1+，依赖 Transient 0.9.0+，两版现有 Transient 0.13.8 满足要求。原生 `codex app-server` 会话显示为 Emacs buffer，无需 Eat、vterm 或终端模拟。`c` 使用公开 `codex-ide` 启动 API 和 `codex-ide-transcript-submit-prompt-to-session` 精确提交到捕获项目的 session，提交时 `:suppress-context t`；配置通过包的公开 session override API 设置。固定版本的模型元数据查询和 `thread/start` 协议回应校验使用已审阅的内部 helper，随包版本锁定。
+使用用户指定的 [dgillis/emacs-codex-ide](https://github.com/dgillis/emacs-codex-ide/tree/5eba84dd58ad8609e8f7e8c4159d4aac90b4f303)，锁定版本 **0.3.2** / commit `5eba84dd58ad8609e8f7e8c4159d4aac90b4f303`。它声明支持 Emacs 28.1+，依赖 Transient 0.9.0+，两版现有 Transient 0.13.8 满足要求。原生 `codex app-server` 会话显示为 Emacs buffer，无需 Eat、vterm 或终端模拟。`c` 使用公开 `codex-ide` 启动 API 和 `codex-ide-transcript-submit-prompt-to-session` 精确提交到捕获项目的 session，提交时 `:suppress-context t`；配置通过包的公开 session override API 设置。固定版本的 `thread/start` 协议回应校验使用已审阅的内部 helper，随包版本锁定。
 
-需要 PATH 中已有 `codex` CLI 和已有登录；配置不安装 CLI、不自动登录、不创建凭据。缺少 CLI 或登录时给出明确提示；自行完成 `codex login` 后重试。QA 会话选择服务 `model/list` 公布的默认模型（没有默认标志时选第一项）及其默认 reasoning effort，只覆盖该会话；不修改全局 Codex 配置。首次问题等到服务回应确认正确项目 cwd、`read-only` 沙箱与 `on-request` 后发送，复用前再次核对项目和当前权限设置。会话忙时给出等待提示，避免另一文件的问题意外 steer 正在回答的 turn；不自动批准命令或文件编辑。
+需要 PATH 中已有 `codex` CLI 和已有登录；配置不安装 CLI、不自动登录、不创建凭据。缺少 CLI 或登录时给出明确提示；自行完成 `codex login` 后重试。新 Code Lens Codex IDE 会话默认 **`gpt-6.1-sol` / `high`**，不修改全局 CLI 配置或其他 Emacs 配置。会话内显式选择的模型与 reasoning effort 保留，复用时不重设。当前 CLI 的 `model/list` 已确认该模型支持 `high`，实际 `thread/start` 使用 `model` 与 `config.model_reasoning_effort` 字段。首次问题等到服务回应确认正确项目 cwd、`read-only` 沙箱与 `on-request` 后发送，复用前再次核对项目和当前权限设置。会话忙时给出等待提示，避免另一文件的问题意外 steer 正在回答的 turn；不自动批准命令或文件编辑。
 
 新包的默认 sandbox 是 `workspace-write`、Emacs context policy 是 `all`，本配置明确覆写为只读并关闭全部自动 context/baseline。可选 Emacs MCP bridge 关闭，不启动 Emacs server、不授予模型额外 editor/tool 访问。只读沙箱限制写入，不限制所有读取；消息要求仅读指定文件的已保存版本。旧 benthamite/codex、Eat、inheritenv 已退出锁文件和包清单，其隔离包源码移到 `.local/retired-packages/` 保留恢复；缓存仍保留，未删除用户聊天记录或认证数据。
 
@@ -164,3 +164,15 @@ bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加
 文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-lsp.el` 配置自动 Eglot，`lisp/lens-source-reading.el` 管理两语言单键，`lisp/lens-codex.el` 管理只读预设问答，`lisp/lens-help.el` 维护快捷键与启动速查，`lisp/lens-packages.el` 维护主要包清单，`tests/review-test.el` 与 `tests/lsp-test.el` 是可重复的检查源码；LSP 检查只用一次性小项目，分别验证真实握手、符号、hover、定义/返回、引用和会话复用，不索引用户仓库。可运行 `./bin/code-lens --batch --load tests/lsp-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-real-automatic-language-servers))'` 重复真实 LSP 检查；`./bin/code-lens -nw --load tests/lsp-test.el --load tests/interactive-runner.el` 验证单键输入、关闭确认和短回答。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。`tests/codex-test.el` 验证文件名捕获、发送取消、CLI/login 错误及权限；真实模型问答另需显式 `CODE_LENS_REAL_QA=1`，不会被 `bin/check` 自动运行。`tests/embark-test.el` 验证真实文件候选与异步搜索结果收集、浏览、跳转及 minibuffer 退出。新增检查覆盖实际多词匹配、文件/命令注释、Consult rg/ignore、版本清单和 scratch 保护。`bin/check-interactive` 在独立终端实例中用真实 minibuffer 验证行搜索、Clojure/OCaml imenu 和异步搜索跳转，自动结束，不操作现有 Emacs。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
 
 官方参考：[Magit](https://magit.vc/manual/magit.html)、[GNU ELPA](https://elpa.gnu.org/)、[Embark / embark-consult](https://elpa.gnu.org/packages/embark-consult.html)、[NonGNU ELPA](https://elpa.nongnu.org/)、[Emacs xref](https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html)。
+
+### 成功跳转高亮与代码结构顶栏
+
+新增 [Pulsar](https://protesilaos.com/emacs/pulsar) **1.4.1** 和 [Breadcrumb](https://github.com/joaotavora/breadcrumb) **1.0.1**，沿用 GNU ELPA tar + SHA-256 锁定下载；Breadcrumb 所需 project 0.9.8 已由 Emacs 29.4 / 30.2 自带满足，无额外依赖安装。
+
+Pulsar 在成功定义 `d`、返回 `b`、索引 `i`、Consult 搜索定位后短暂高亮（4 × 0.04 秒）。普通光标移动、候选预览、取消和失败不触发。xref / Embark 原生 pulse 在这些源 buffer 内由一次 Pulsar 取代，避免重复闪动；其他 buffer 保留原生 xref 行为。
+
+Clojure / OCaml 文件空闲顶栏显示 Breadcrumb，代码结构先于项目路径，长路径只使用剩余宽度。OCaml 的 Eglot DocumentSymbol 范围可直接提供 `Outer > Inner > record_t > count`、variant 构造器、函数 / 局部绑定，以及 `.mli` 的 module / val / type 层级；同名函数按实际范围区分。Emacs 30.2 原生 Eglot 已保留这些范围；29.4 的旧 Eglot 会拍平层级，因此增加一个仅在本配置顶栏 buffer 生效的 DocumentSymbol → Imenu 兼容转换，直接保留原始节点及范围，不解析源码。Clojure LSP 返回 namespace 和 defn 平级范围，因此显示 `nav.core · alpha`：namespace 是 LSP 确认的文件上下文，`·` 不表示包围函数的范围。离开符号范围时不会把上一函数当成当前函数。
+
+未连接 LSP 时显示 **[文本]**，使用原有 Imenu 文本近似索引；OCaml 仅顶层索引，不承诺嵌套范围、类型或字段。启动 / 关闭 Eglot 会清理 Breadcrumb 缓存，即使文件没有编辑。已有 header-line 或 which-function 显示会保留，避免增加重复顶栏；`M-x lens-breadcrumb-mode` 可关闭本配置顶栏。只作用于这些语言文件，不改变 Codex IDE 的 header。
+
+`tests/navigation-display-test.el` 包含结构、范围、顶栏兼容与真实 Pulsar overlay 检查；真实 LSP 使用一次性源码项目和现有服务器，不构建用户项目。可运行 `./bin/code-lens --batch --load tests/navigation-display-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-navigation-real-semantic-scopes))'` 检查真实范围，或 `CODE_LENS_NAVIGATION_ONLY=1 ./bin/check-interactive` 仅重跑独立终端的定义 / 返回 / 索引 / 搜索 / 移动 / 取消验证。更新后的配置在重新启动 Code Lens 时生效，未自动重载现有 GUI Emacs。

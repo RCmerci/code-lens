@@ -83,7 +83,10 @@
    "方括号内是实际 keymap 中的命令名；M-x 也可调用。\n\n"
    (lens-primary-package-summary)
    "  内置 Eglot：Clojure / OCaml 文件自动连接语言服务器，提供定义、引用与符号说明。\n"
-   "  主题 modus-operandi-tinted；确认问题使用 y / n。\n\n"
+   "  主题 modus-operandi-tinted；确认问题使用 y / n。\n"
+   "  Pulsar：成功定义 / 返回 / 索引 / 搜索跳转短暂高亮；普通光标移动不闪。\n"
+   "  Breadcrumb：顶栏优先代码层级，后接项目路径；[文本] 表示近似索引。\n"
+   "  OCaml 语义层级含嵌套模块、类型、字段；Clojure namespace · 当前 defn。\n\n"
    (lens-source-reading-help-text)
    "\nCodex IDE 当前文件问答\n"
    "  c 使用 Vertico 选择预设；RET 发送，C-g 取消时不启动或发送。\n"
@@ -92,6 +95,7 @@
    "  按 c 捕获源项目；模板使用完整项目内相对路径，不嵌入全文或选区。\n"
    "  Codex cwd 是对应项目根，自己读取磁盘版本；未保存修改不会保存或发送。\n"
    "  无文件 / 无项目 / 项目外或远程文件会提示并停止。\n"
+   "  新 Code Lens 会话默认 gpt-6.1-sol / high；保留会话内显式覆盖。\n"
    "  使用现有 Codex CLI 登录；只读沙箱 + on-request，保留审批提示。\n"
    "  不安装 CLI、不登录、MCP/context 关闭；解锁后 c 恢复普通输入。\n"
    "\n补全与预览\n"

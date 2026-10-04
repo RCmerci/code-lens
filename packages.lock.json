@@ -167,6 +167,25 @@
         "emacs": "28.1",
         "transient": "0.9.0"
       }
+    },
+    {
+      "name": "pulsar",
+      "version": "1.4.1",
+      "url": "https://elpa.gnu.org/packages/pulsar-1.4.1.tar",
+      "sha256": "ac34cd4fc652212c2db4702c4331db9e33f9651ebb76c0ce6434b542dc82150c",
+      "requires": {
+        "emacs": "28.1"
+      }
+    },
+    {
+      "name": "breadcrumb",
+      "version": "1.0.1",
+      "url": "https://elpa.gnu.org/packages/breadcrumb-1.0.1.tar",
+      "sha256": "bc250a5620481adee0c847f6f0f4967028beb8d6ec96451a51b40e14be50c9e8",
+      "requires": {
+        "emacs": "28.1",
+        "project": "0.9.8"
+      }
     }
   ]
 }

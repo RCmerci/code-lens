@@ -2,17 +2,20 @@
 (require 'ert)
 (load (expand-file-name "tests/codex-test.el" lens-root) nil t)
 (load (expand-file-name "tests/embark-test.el" lens-root) nil t)
+(load (expand-file-name "tests/navigation-display-test.el" lens-root) nil t)
 (add-hook
  'emacs-startup-hook
  (lambda ()
    (run-at-time
     0.1 nil
     (lambda ()
-      (let ((report (or (getenv "CODE_LENS_TEST_REPORT")
+      (let ((selector (if (getenv "CODE_LENS_NAVIGATION_ONLY")
+                          '(tag navigation-interactive) '(tag interactive)))
+            (report (or (getenv "CODE_LENS_TEST_REPORT")
                         (expand-file-name "docs/test-reports/completion-interactive.log" lens-root))))
         (make-directory (file-name-directory report) t)
         (condition-case failure
-            (let ((stats (ert-run-tests-batch '(tag interactive))))
+            (let ((stats (ert-run-tests-batch selector)))
               (with-temp-file report
                 (insert (format "Emacs %s; independent terminal startup\n" emacs-version))
                 (insert (format "Real minibuffer tests: %s total, %s expected, %s unexpected\n"
@@ -23,7 +26,7 @@
                                 vertico-mode marginalia-mode fido-mode))
                 (insert "Codex dispatch mocked; no external question sent.\n")
                 (insert (lens-primary-package-summary))
-                (dolist (test (ert-select-tests '(tag interactive) t))
+                (dolist (test (ert-select-tests selector t))
                   (let ((result (ert-test-most-recent-result test)))
                     (when (ert-test-failed-p result)
                       (insert (format "FAILED %s: %S\n" (ert-test-name test) (ert-test-failed-condition result)))))))

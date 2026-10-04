@@ -192,18 +192,20 @@
      (should (= (char-before) ?f))
      (read-only-mode 1))))
 
-(ert-deftest lens-codex-advertised-model-is-session-local ()
-  (let ((codex-ide-model "unchanged-global") (lens-codex-sessions (make-hash-table :test 'equal)))
-    (with-temp-buffer
-      (let ((session (make-codex-ide-session :directory (file-truename "/tmp") :buffer (current-buffer))))
-        (puthash (file-name-as-directory (file-truename "/tmp")) session lens-codex-sessions)
-        (cl-letf (((symbol-function 'codex-ide--list-models)
-                   (lambda (_) '(((model . "first") (isDefault . :false))
-                                 ((model . "advertised") (isDefault . t) (defaultReasoningEffort . "medium"))))))
-          (lens-codex-session-event 'status-changed session '(:reason initialized)))
-        (should (equal (codex-ide-config-effective-value 'model session) "advertised"))
-        (should (equal (codex-ide-config-effective-value 'reasoning-effort session) "medium"))))
-    (should (equal codex-ide-model "unchanged-global"))))
+(ert-deftest lens-codex-requested-defaults-and-session-overrides ()
+  (lens-test-project
+   (with-temp-buffer
+     (setq default-directory (file-name-as-directory directory))
+     (let* ((session (make-codex-ide-session :directory directory :buffer (current-buffer)))
+            (params (codex-ide--thread-start-params session)))
+       (should (equal (alist-get 'model params) "gpt-6.1-sol"))
+       (should (equal (alist-get 'model_reasoning_effort (alist-get 'config params)) "high"))
+       (codex-ide-config-set-session-value 'model "explicit-session-model" session)
+       (codex-ide-config-set-session-value 'reasoning-effort "low" session)
+       (lens-codex-session-event 'status-changed session '(:reason initialized))
+       (let ((overridden (codex-ide--thread-start-params session)))
+         (should (equal (alist-get 'model overridden) "explicit-session-model"))
+         (should (equal (alist-get 'model_reasoning_effort (alist-get 'config overridden)) "low")))))))
 
 (ert-deftest lens-codex-first-question-waits-for-confirmed-permissions ()
   (let ((lens-codex-sessions (make-hash-table :test 'equal))

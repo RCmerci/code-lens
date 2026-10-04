@@ -3,7 +3,9 @@
 (require 'project)
 (require 'subr-x)
 ;; No editor-context injection, tool bridge/server, new login, or implicit write access.
-(setq codex-ide-sandbox-mode "read-only"
+(setq codex-ide-model "gpt-6.1-sol"
+      codex-ide-reasoning-effort "high"
+      codex-ide-sandbox-mode "read-only"
       codex-ide-approval-policy "on-request"
       codex-ide-emacs-context-policy nil
       codex-ide-session-baseline-prompt nil
@@ -61,21 +63,13 @@
        (eq session (gethash (file-name-as-directory (codex-ide-session-directory session))
                            lens-codex-sessions))))
 
-(defun lens-codex-session-event (event session payload)
-  "Use the package lifecycle hook and public per-session config API."
+(defun lens-codex-session-event (event session _payload)
+  "Mark new QA sessions and apply only their read-only permission overrides.
+Model/effort use Code Lens defaults; later explicit session overrides remain intact."
   (when (and (eq event 'created) lens-codex-launch-p)
     (puthash (file-name-as-directory (codex-ide-session-directory session)) session lens-codex-sessions)
     (codex-ide-config-set-session-value 'sandbox-mode "read-only" session)
-    (codex-ide-config-set-session-value 'approval-policy "on-request" session))
-  (when (and (lens-codex-owned-session-p session) (eq event 'status-changed)
-             (eq (plist-get payload :reason) 'initialized))
-    ;; Pinned metadata helper: query advertised models before the first thread/start.
-    (let* ((models (codex-ide--list-models session))
-           (model (or (cl-find-if (lambda (m) (eq (alist-get 'isDefault m) t)) models) (car models)))
-           (id (alist-get 'model model)))
-      (unless (stringp id) (user-error "Code Lens: no advertised Codex model; no question sent"))
-      (codex-ide-config-set-session-value 'model id session)
-      (codex-ide-config-set-session-value 'reasoning-effort (alist-get 'defaultReasoningEffort model) session))))
+    (codex-ide-config-set-session-value 'approval-policy "on-request" session)))
 (add-hook 'codex-ide-session-event-hook #'lens-codex-session-event)
 
 (defun lens-codex-confirm-thread (request session method params)
