@@ -179,9 +179,9 @@ Clojure / OCaml 文件空闲顶栏显示 Breadcrumb，只显示代码结构，�
 
 ### OCaml Outline 与自有源码依赖边界
 
-OCaml 只读阅读状态下按 **`o`** 调用 `ocaml-outline`，在右侧打开大纲并保留源窗口。大纲沿用现有实现的 LSP 符号树、类型标签、顶层行数、TAB 展开 / 折叠、`n` / `p` 浏览、RET 跳转、`g` 刷新和源光标位置跟随；`q` 关闭大纲窗口，源文件仍只读。未连接 Eglot 时明确提示用 `C-c r s` 连接 / 重试，不伪造语义大纲。Clojure 的 `o` 保持原行为；解锁或关闭阅读模式后 OCaml 的 `o` 恢复普通输入。
+OCaml 只读阅读状态下按 **`o`** 调用 `lens-toggle-ocaml-outline`：当前 frame 中对应文件的大纲未显示时打开，已显示时关闭其窗口；打开时保留源窗口焦点，在大纲内再次按 `o` 则关闭并返回对应源文件，源窗口已隐藏时恢复对应源文件并保留其他窗口。仅操作当前文件关联的大纲，不关闭其他文件或其他 frame 的窗口。大纲沿用现有实现的 LSP 符号树、类型标签、顶层行数、TAB 展开 / 折叠、`n` / `p` 浏览、RET 跳转、`g` 刷新和源光标位置跟随；`q` 关闭大纲窗口，源文件仍只读。未连接 Eglot 时明确提示用 `C-c r s` 连接 / 重试，不伪造语义大纲。Clojure 的 `o` 保持原行为；解锁或关闭阅读模式后 OCaml 的 `o` 恢复普通输入。
 
-实现源码已从用户原有 `~/.emacs.d/myown/ocaml-outline.el` 复制至受 Git 管理的 **`lisp/ocaml-outline.el`**，保留原内容，并在文件头记录来源及原文件 SHA-256；原配置未改动。`lisp/lens-ocaml-outline.el` 只加未连接提示与 Emacs 29 范围兼容接入；刷新时复用已有真实 DocumentSymbol 转换，已有 header-line / which-function 不影响大纲层级。
+实现源码已从用户原有 `~/.emacs.d/myown/ocaml-outline.el` 复制至受 Git 管理的 **`lisp/ocaml-outline.el`**，保留原内容，并在文件头记录来源及原文件 SHA-256；原配置未改动。`lisp/lens-ocaml-outline.el` 提供窗口 toggle、未连接提示与 Emacs 29 范围兼容接入；刷新时复用已有真实 DocumentSymbol 转换，已有 header-line / which-function 不影响大纲层级。
 
 Code Lens 的自有 Elisp 全部在本仓库内，**不依赖个人 `~/.emacs.d/`、其他 Mac 本地自定义 Elisp、外部配置目录或 symlink**。允许的运行依赖为 Emacs 29.1+ 内置库、`packages.lock.json` 声明并下载至仓库 `.local/profile/elpa/` 的第三方包，以及 PATH 中或显式指定的第三方可执行工具（Emacs、Git、rg、Codex、clojure-lsp、ocamllsp）。启动使用 `-Q`；配置、custom-file 和状态缓存均留在仓库 `.local/profile/`，不加载个人 init。Mac App 路径只是可执行程序查找的可选回退，其他系统可使用 PATH / `CODE_LENS_EMACS`。复制 / 克隆本仓库后运行 `bin/bootstrap` 即可安装锁定的包，自有 Outline 不从个人配置读取。
 
