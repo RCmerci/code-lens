@@ -4,7 +4,7 @@
 (require 'lens-codex)
 
 (defconst lens-source-reading-shortcuts
-  '(("t" lens-source-type "显示类型 / 符号说明（Clojure 为 hover 文档）")
+  '(("t" lens-source-type "Clojure hover 文档；OCaml 使用下方 Merlin t")
     ("d" lens-source-definition "语义定义跳转")
     ("b" xref-go-back "返回跳转前位置")
     ("r" lens-source-references "语义引用")
@@ -45,6 +45,9 @@
   (lens-ocaml-outline-keys-mode
    (if (and lens-source-reading-keys-mode (eq (lens-eglot-language) 'ocaml)) 1 -1)))
 (add-hook 'lens-source-reading-keys-mode-hook #'lens-sync-ocaml-outline-keys)
+;; Define the OCaml override after the shared map, so t wins in OCaml only.
+(require 'lens-merlin)
+(add-hook 'lens-source-reading-keys-mode-hook #'lens-sync-merlin-type-keys)
 
 (defun lens-sync-source-reading-keys ()
   "Restore normal character input as soon as the source buffer is unlocked."
@@ -103,9 +106,10 @@
           (mapconcat (lambda (entry)
                        (format "  %-3s %s [%s]\n" (car entry) (nth 2 entry) (cadr entry)))
                      lens-source-reading-shortcuts "")
+          (lens-merlin-type-help-text)
           "  o   仅 OCaml：开关当前文件的右侧大纲 [lens-toggle-ocaml-outline]；大纲内 o 关闭并回源；需 Eglot，TAB 折叠，RET 跳转，q 关闭窗口。\n"
           "  C-c r e / C-x C-q 临时解锁后恢复普通字符输入；重新锁定再启用。\n"
-          "  关闭 lens-reading-mode 同样恢复输入；t/d/r 需要已连接的语言服务器。\n"))
+          "  关闭 lens-reading-mode 同样恢复输入；d/r 和 Clojure t 需语言服务器；OCaml t/T 需独立 Merlin。\n"))
 (defun lens-source-reading-help ()
   "Show single-key reading help in a separate buffer."
   (interactive)

@@ -3,7 +3,8 @@
   "sources": [
     "https://elpa.gnu.org/packages/",
     "https://elpa.nongnu.org/nongnu/",
-    "https://codeload.github.com/dgillis/emacs-codex-ide/tar.gz/"
+    "https://codeload.github.com/dgillis/emacs-codex-ide/tar.gz/",
+    "https://github.com/ocaml/merlin/releases/download/v5.8.1-505/"
   ],
   "packages": [
     {
@@ -185,6 +186,24 @@
       "requires": {
         "emacs": "28.1",
         "project": "0.9.8"
+      }
+    },
+    {
+      "name": "merlin",
+      "version": "3.0",
+      "upstream-version": "5.8.1-505",
+      "format": "upstream-tar",
+      "filename": "merlin-5.8.1-505.tbz",
+      "url": "https://github.com/ocaml/merlin/releases/download/v5.8.1-505/merlin-5.8.1-505.tbz",
+      "sha256": "b8fb32bc0fc092af2fd6bdc831cb966057f2e3fd7b99a172b705e96ba8082583",
+      "module-prefix": "merlin-5.8.1-505/emacs/",
+      "modules": [
+        "merlin.el",
+        "merlin-cap.el",
+        "merlin-xref.el"
+      ],
+      "dependencies": {
+        "emacs": "25.1"
       }
     }
   ]

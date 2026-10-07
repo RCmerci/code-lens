@@ -1,6 +1,6 @@
 # Code Lens
 
-一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Embark、embark-consult、Modus Themes、Codex IDE，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
+一个独立的 Emacs 代码阅读 / review 配置，重点是 Clojure 与 OCaml。使用 Magit、clojure-mode、Tuareg、rainbow-delimiters、Consult、Vertico、Orderless、Marginalia、Embark、embark-consult、Modus Themes、Codex IDE、Merlin，以及 Emacs 内置的 project、imenu、xref、outline 和 Eglot。普通代码默认只读；Clojure / OCaml 文件自动连接语言服务器，不启动 REPL、不自动格式化。默认主题为 `modus-operandi-tinted`，确认问题用 `y` / `n`。
 
 ## 启动
 
@@ -30,7 +30,7 @@ cd ~/gh-repos/datascript
 CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 ```
 
-使用启动脚本，而不是把 init.el 复制到个人配置。脚本以 `-Q` 启动并显式加载本仓库文件；不读取个人 `.emacs` / `.emacs.d/init.el` 或 site init。包、custom、历史、项目列表、保存位置、备份和自动保存都在 `.local/`。不会创建 daemon、改动默认启动方式、设置全局 Git/opam 或推送远端。
+使用启动脚本，而不是把 init.el 复制到个人配置。脚本以 `-Q` 启动并显式加载本仓库文件；不读取个人 `.emacs` / `.emacs.d/init.el` 或 site init。包、custom、历史、项目列表、保存位置、备份和自动保存都在 `.local/`。不会创建 Emacs daemon、改动默认启动方式、设置全局 Git/opam 或推送远端。
 
 ## 最常用的键
 
@@ -83,7 +83,7 @@ Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`�
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-merlin" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -110,7 +110,8 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 | --- | --- |
 | `c` | Vertico 选择预设或输入当前文件自由问题 |
 | `f` | project-find-file 查找项目文件 |
-| `t` | Eglot 类型 / 符号说明；OCaml 显示类型，Clojure 显示 hover 文档 |
+| `t` | OCaml：Merlin enclosing 类型；Clojure：Eglot hover 文档 |
+| `T` | 仅 OCaml：输入上下文表达式查询类型，不写文件 |
 | `d` / `b` | Eglot 定义 / xref 返回 |
 | `r` | Eglot 引用，Consult 选择结果 |
 | `i` | Consult 定义索引 |
@@ -120,7 +121,7 @@ Clojure / OCaml 源码中，`lens-reading-mode` 与只读同时启用时使用�
 | `q` | 正常关闭当前 buffer，未保存文件仍会询问确认 |
 | `?` | 独立窗口显示完整单键帮助 |
 
-`C-c r e` 或 `C-x C-q` 临时解锁后，字符恢复普通输入；重新锁定后单键恢复。关闭 `lens-reading-mode` 同样恢复编辑。`t/d/r` 在服务器未连接或当前位置没有符号时给出提示；`d/b` 保留正常 xref 返回栈。Clojure 是动态语言，hover 文档不等于静态类型推断。
+`C-c r e` 或 `C-x C-q` 临时解锁后，字符恢复普通输入；重新锁定后单键恢复。关闭 `lens-reading-mode` 同样恢复编辑。`d/r` 和 Clojure `t` 在服务器未连接或当前位置没有符号时给出提示；OCaml `t/T` 使用独立 Merlin；`d/b` 保留正常 xref 返回栈。Clojure 是动态语言，hover 文档不等于静态类型推断。
 
 ## 当前文件 Codex 问答
 
@@ -149,19 +150,19 @@ Codex 自己从磁盘读取该文件。未保存修改不会偷偷保存或发�
 - Clojure：从启动 PATH 解析 `clojure-lsp` 的绝对路径。
 - OCaml：从启动 PATH 解析 **目标项目的已有 opam switch** 中 `ocamllsp` 的绝对路径。从准备好的项目 shell 启动，或 `opam exec --switch=<已有switch> -- ~/gh-repos/code-lens/bin/code-lens .`；不创建/切换全局 switch，不运行 `dune build`。
 
-`M-.` 连接后使用 Eglot 语义定义，连接前回退当前文件 imenu；`M-?` 查引用，`M-,` 返回。单键 `t/d/r` 要求 live server，不把文本结果充当语义结果。服务器缺失时基础阅读、行搜索、项目搜索和索引仍可用，`C-c r s` 可重试。`M-x eglot-shutdown` 断开当前 server；可设置 `lens-eglot-auto-start` 为 nil 来停用后续文件的自动连接。
+`M-.` 连接后使用 Eglot 语义定义，连接前回退当前文件 imenu；`M-?` 查引用，`M-,` 返回。单键 `d/r` 和 Clojure 的 `t` 要求 live server；OCaml `t/T` 调用独立 Merlin 类型查询，不需要 Eglot 会话。服务器缺失时基础阅读、行搜索、项目搜索和索引仍可用，`C-c r s` 可重试。`M-x eglot-shutdown` 断开当前 server；可设置 `lens-eglot-auto-start` 为 nil 来停用后续文件的自动连接。
 
 源码只读不妨碍 LSP 的读取、类型与导航。格式化、rename、code action 能力被忽略，读取配置移除 Eglot 的保存时编辑 hook。语言服务器可以索引项目、解析依赖并写缓存。本仓库不安装服务器；GUI 从启动 shell 继承 PATH，其他项目应使用对应工具环境。
 
 ## 包与维护
 
-主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**、Embark **1.2**、embark-consult **1.2**、Codex IDE **0.3.2**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
+主要第三方包：Magit **4.7.1**、clojure-mode **5.23.0**、Tuareg **3.1.0**、Merlin Emacs 接口 **3.0**（官方 release **5.8.1-505**）、rainbow-delimiters **2.1.5**、Consult **3.10**、Vertico **2.15**、Orderless **1.8**、Marginalia **2.13**、Modus Themes **5.3.0**、Embark **1.2**、embark-consult **1.2**、Codex IDE **0.3.2**。Emacs 29 没有内置 tinted 主题，因此两版本统一加载锁定的官方 GNU ELPA Modus 包。启动清单由 `lisp/lens-packages.el` 的主要功能表读取实际安装的 package descriptors 生成，不混入内置功能或传递依赖。四个补全包来自官方 GNU ELPA，使用现有 Compat 依赖。
 
-`packages.lock.json` 包含全部外部依赖的准确版本、GNU/NonGNU ELPA 和用户指定 GitHub 固定 commit（Codex IDE）的 HTTPS 下载地址及 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从对应 HTTPS 源取得源码时记录的校验值，不是独立的签名验证。
+`packages.lock.json` 包含全部外部 Elisp 依赖的准确版本、GNU/NonGNU ELPA、用户指定 GitHub 固定 commit（Codex IDE）及官方 Merlin release 的 HTTPS 下载地址及 SHA256。bootstrap 校验每个下载/缓存文件，校验失败会停止；平常启动不更新包。锁文件是首次从对应 HTTPS 源取得源码时记录的校验值，不是独立的签名验证。
 
 bootstrap 不做 native/byte 编译，避免共享机器重负载；运行时加载源码。`seq` 如内置版本已满足要求则直接使用 Emacs 自带实现。不要在此 profile 内用 package 菜单升级依赖；要更换版本应审阅锁文件并重新生成隔离包目录。删除 `.local/` 后重新运行 bootstrap 可恢复，但会清掉此配置自己的历史/自定义。个人 Emacs 配置不受影响。
 
-文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-lsp.el` 配置自动 Eglot，`lisp/lens-source-reading.el` 管理两语言单键，`lisp/lens-codex.el` 管理只读预设问答，`lisp/lens-help.el` 维护快捷键与启动速查，`lisp/lens-packages.el` 维护主要包清单，`tests/review-test.el` 与 `tests/lsp-test.el` 是可重复的检查源码；LSP 检查只用一次性小项目，分别验证真实握手、符号、hover、定义/返回、引用和会话复用，不索引用户仓库。可运行 `./bin/code-lens --batch --load tests/lsp-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-real-automatic-language-servers))'` 重复真实 LSP 检查；`./bin/code-lens -nw --load tests/lsp-test.el --load tests/interactive-runner.el` 验证单键输入、关闭确认和短回答。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。`tests/codex-test.el` 验证文件名捕获、发送取消、CLI/login 错误及权限；真实模型问答另需显式 `CODE_LENS_REAL_QA=1`，不会被 `bin/check` 自动运行。`tests/embark-test.el` 验证真实文件候选与异步搜索结果收集、浏览、跳转及 minibuffer 退出。新增检查覆盖实际多词匹配、文件/命令注释、Consult rg/ignore、版本清单和 scratch 保护。`bin/check-interactive` 在独立终端实例中用真实 minibuffer 验证行搜索、Clojure/OCaml imenu 和异步搜索跳转，自动结束，不操作现有 Emacs。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
+文件组织：`early-init.el` 负责隔离，`init.el` 加载依赖，`lisp/lens-review.el` 定义阅读功能，`lisp/lens-lsp.el` 配置自动 Eglot，`lisp/lens-source-reading.el` 管理两语言单键，`lisp/lens-merlin.el` 接入显式 OCaml 类型查询，`lisp/lens-codex.el` 管理只读预设问答，`lisp/lens-help.el` 维护快捷键与启动速查，`lisp/lens-packages.el` 维护主要包清单，`tests/review-test.el` 与 `tests/lsp-test.el` 是可重复的检查源码；LSP 检查只用一次性小项目，分别验证真实握手、符号、hover、定义/返回、引用和会话复用，不索引用户仓库。可运行 `./bin/code-lens --batch --load tests/lsp-test.el --eval '(ert-run-tests-batch-and-exit (quote lens-real-automatic-language-servers))'` 重复真实 LSP 检查；`./bin/code-lens -nw --load tests/lsp-test.el --load tests/interactive-runner.el` 验证单键输入、关闭确认和短回答。`bin/check` 创建一次性临时 Git 仓库测试只读、两种语言结构/索引、搜索/返回、Magit status/log/blame/diff/hunk，以及 stage 仍可执行；不对用户项目做 Git 写操作。`tests/codex-test.el` 验证文件名捕获、发送取消、CLI/login 错误及权限；真实模型问答另需显式 `CODE_LENS_REAL_QA=1`，不会被 `bin/check` 自动运行。`tests/embark-test.el` 验证真实文件候选与异步搜索结果收集、浏览、跳转及 minibuffer 退出。新增检查覆盖实际多词匹配、文件/命令注释、Consult rg/ignore、版本清单和 scratch 保护。`bin/check-interactive` 在独立终端实例中用真实 minibuffer 验证行搜索、Clojure/OCaml imenu 和异步搜索跳转，自动结束，不操作现有 Emacs。真实项目检查结果与截图放在被忽略的 `docs/test-reports/`，缓存、elc、eln 和报告不提交。
 
 官方参考：[Magit](https://magit.vc/manual/magit.html)、[GNU ELPA](https://elpa.gnu.org/)、[Embark / embark-consult](https://elpa.gnu.org/packages/embark-consult.html)、[NonGNU ELPA](https://elpa.nongnu.org/)、[Emacs xref](https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html)。
 
@@ -183,10 +184,32 @@ OCaml 只读阅读状态下按 **`o`** 调用 `lens-toggle-ocaml-outline`：当�
 
 实现源码已从用户原有 `~/.emacs.d/myown/ocaml-outline.el` 复制至受 Git 管理的 **`lisp/ocaml-outline.el`**，保留原内容，并在文件头记录来源及原文件 SHA-256；原配置未改动。`lisp/lens-ocaml-outline.el` 提供窗口 toggle、未连接提示与 Emacs 29 范围兼容接入；刷新时复用已有真实 DocumentSymbol 转换，已有 header-line / which-function 不影响大纲层级。
 
-Code Lens 的自有 Elisp 全部在本仓库内，**不依赖个人 `~/.emacs.d/`、其他 Mac 本地自定义 Elisp、外部配置目录或 symlink**。允许的运行依赖为 Emacs 29.1+ 内置库、`packages.lock.json` 声明并下载至仓库 `.local/profile/elpa/` 的第三方包，以及 PATH 中或显式指定的第三方可执行工具（Emacs、Git、rg、Codex、clojure-lsp、ocamllsp）。启动使用 `-Q`；配置、custom-file 和状态缓存均留在仓库 `.local/profile/`，不加载个人 init。Mac App 路径只是可执行程序查找的可选回退，其他系统可使用 PATH / `CODE_LENS_EMACS`。复制 / 克隆本仓库后运行 `bin/bootstrap` 即可安装锁定的包，自有 Outline 不从个人配置读取。
+Code Lens 的自有 Elisp 全部在本仓库内，**不依赖个人 `~/.emacs.d/`、其他 Mac 本地自定义 Elisp、外部配置目录或 symlink**。允许的运行依赖为 Emacs 29.1+ 内置库、`packages.lock.json` 声明并下载至仓库 `.local/profile/elpa/` 的第三方包，以及 PATH 中或显式指定的第三方可执行工具（Emacs、Git、rg、Codex、clojure-lsp、ocamllsp、ocamlmerlin 及其 dot-merlin-reader / dune 配置读取器）。启动使用 `-Q`；配置、custom-file 和状态缓存均留在仓库 `.local/profile/`，不加载个人 init。Mac App 路径只是可执行程序查找的可选回退，其他系统可使用 PATH / `CODE_LENS_EMACS`。复制 / 克隆本仓库后运行 `bin/bootstrap` 即可安装锁定的包，自有 Outline 不从个人配置读取。
 
 `tests/ocaml-outline-test.el` 覆盖 o 键作用域、真实 LSP 结构 / 窗口 / 跳转 / 折叠 / 关闭与隔离启动的 Elisp 解析路径；可用 `CODE_LENS_OUTLINE_ONLY=1 ./bin/check-interactive` 重跑独立终端大纲测试；测试报告和所有运行缓存继续忽略，不发布个人配置或凭据。
 
 ### 简洁窗口
 
 GUI Code Lens 隐藏图标工具栏与原生窗口标题栏，使用 `tool-bar-mode -1`、初始 / 新 frame 的 `tool-bar-lines=0` 与 `undecorated=t`；代码结构 Breadcrumb 保留，且不再显示项目或文件路径。macOS NS 后端在 [Emacs 29.4](https://github.com/emacs-mirror/emacs/blob/emacs-29.4/src/nsfns.m) 和 [30.2](https://github.com/emacs-mirror/emacs/blob/emacs-30.2/src/nsfns.m) 均实现 `undecorated` frame 参数。终端 frame 不应用图形装饰参数，不影响终端启动。配置只影响本隔离实例的 frame，不自动重载现有个人 Emacs。
+
+### OCaml Merlin 类型查询
+
+OCaml 的 `lens-reading-mode` + 只读状态使用 **`t` → `merlin-type-enclosing`**、**`T` → `merlin-type-expr`**。`t` 查询光标处表达式，随后 `C-↑` / `C-↓`（Emacs 写作 `C-<up>` / `C-<down>`）逐层扩大 / 缩小 enclosing 范围并短暂高亮；在同一位置重复 `t` 增加类型细节，例如 `count` 展开为 `int`。`T` 在 minibuffer 输入表达式，使用当前光标的代码上下文查询，不把表达式插入源文件，不保存文件。Clojure 的 `t` 仍是 Eglot hover 文档，`T` 不绑定；解锁或关闭阅读模式后 `t/T` 恢复正常输入。`o` Outline 开关保持原功能。
+
+仅加载官方查询实现，**不启用 `merlin-mode`**；不注册 Merlin xref、补全、Imenu、idle 错误提示，关闭保存后自动检查。Eglot 保持现有诊断设置和定义 / 引用 / 返回导航。两个单键直接绑定官方命令，保留原生 enclosing 临时键图与重复查询的 verbosity，不用自制类型解析。针对锁定接口延迟读取外层类型时的 verbosity 参数错误，自有适配仅规范化查询后的参数缓存，保留官方范围、类型结果与临时键图。scratch / `C-c r ?` 从同一份键表和实际 keymap 生成这两项说明，已有笔记不会覆盖。
+
+Emacs 接口锁定到官方 **Merlin 5.8.1-505** release，接口文件自身标注 / package descriptor 为 **3.0**，`bin/bootstrap` 校验官方 archive 的 SHA256 并将 `merlin.el`、`merlin-cap.el`、`merlin-xref.el` 安装到本仓库 `.local/profile/elpa/merlin-3.0/`；不从 Opam share 或个人 Emacs 配置加载 Elisp。
+
+二进制顺序：显式 `CODE_LENS_MERLIN` → 启动 PATH 中的 `ocamlmerlin` → `.local/tools/merlin-5.8.1-505/bin/ocamlmerlin`。显式无效路径会报错，不静默回退；本仓库二进制仅在启动环境的 `ocamlc` 为 **5.5.x** 时回退使用。目标项目的 Dune / `.merlin` 配置由官方工具读取；编译器或依赖不匹配时应使用该项目环境中匹配的 Merlin。切换工具环境后重启 Code Lens，或将源 buffer 的 `merlin-buffer-configuration` 设为 nil 重新解析。
+
+本机共享 `logseq-journal-lui` switch 已有 OCaml **5.5.0**、merlin-lib **5.8.1-505**、ocamllsp **1.27.0**，但没有独立 `ocamlmerlin`。本需求的 Merlin 和 `dot-merlin-reader` 已安装到上述 `.local/tools/` 前缀，复用现有库，未改变共享 switch 或 pins。可以在相同工具链环境用 **Python 3.12+** 重复安装：
+
+```sh
+./bin/bootstrap-merlin
+```
+
+该脚本先验证已有 OCaml / merlin-lib 版本，校验同一官方源码 archive，用 `dune build -p merlin,dot-merlin-reader -j 2` 和仓库内 `--prefix` 安装；不会 `opam install`、创建 switch、改变 pins 或构建用户项目。其他项目应在启动 Code Lens 前加载自己的工具环境，或显式指定匹配的 `CODE_LENS_MERLIN`。
+
+验证：`tests/merlin-test.el` 检查真实 `count → int` 重复细节、enclosing 扩缩范围、`add score 5 : int`、表达式未写入文件、Eglot 定义 / 返回 / 引用和解锁后普通输入。`CODE_LENS_MERLIN_ONLY=1 ./bin/check-interactive` 使用独立终端及真实表达式输入；不操作已有用户 Emacs GUI。
+
+官方参考：[Merlin Emacs](https://ocaml.github.io/merlin/editor/emacs/)、[Merlin 5.8.1-505](https://github.com/ocaml/merlin/releases/tag/v5.8.1-505)。

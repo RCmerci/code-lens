@@ -1,5 +1,7 @@
 ;;; lsp-test.el --- Theme and real automatic LSP checks -*- lexical-binding: t; -*-
-(load (expand-file-name "tests/review-test.el" lens-root) nil t)
+(require 'ert)
+(unless (ert-test-boundp 'lens-isolated-runtime)
+  (load (expand-file-name "tests/review-test.el" lens-root) nil t))
 
 (ert-deftest lens-automatic-lsp-defaults-and-theme ()
   (should (custom-theme-enabled-p 'modus-operandi-tinted))
@@ -68,7 +70,7 @@
              (let ((origin (point)) (source (current-buffer))
                    (ocaml (eq (lens-eglot-language) 'ocaml)))
                (execute-kbd-macro "t")
-               (with-current-buffer "*Code Lens Symbol*"
+               (with-current-buffer (if ocaml merlin-type-buffer-name "*Code Lens Symbol*")
                  (should (string-match-p (if ocaml "int" "answer")
                                          (buffer-string))))
                (should (eq source (current-buffer)))
@@ -103,7 +105,7 @@
   (let ((lens-eglot-auto-start nil))
     (with-temp-buffer
       (tuareg-mode)
-      (should (eq (key-binding "t") 'lens-source-type))
+      (should (eq (key-binding "t") 'merlin-type-enclosing))
       (should (eq (key-binding "d") 'lens-source-definition))
       (should (eq (key-binding "q") 'lens-source-quit))
       (should-error (lens-source-type) :type 'user-error)
@@ -111,7 +113,7 @@
       (should (eq (key-binding "t") 'self-insert-command))
       (insert "typed input")
       (read-only-mode 1)
-      (should (eq (key-binding "t") 'lens-source-type))
+      (should (eq (key-binding "t") 'merlin-type-enclosing))
       (lens-reading-mode -1)
       (should (eq (key-binding "d") 'self-insert-command))
       (should (equal (buffer-string) "typed input")))
@@ -126,7 +128,7 @@
     (with-temp-buffer
       (setq major-mode 'ocaml-ts-mode)
       (lens-reading-mode 1)
-      (should (eq (key-binding "t") 'lens-source-type)))))
+      (should (eq (key-binding "t") 'merlin-type-enclosing)))))
 
 (ert-deftest lens-interactive-short-answers ()
   :tags '(interactive)

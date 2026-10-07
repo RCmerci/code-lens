@@ -6,6 +6,7 @@
   '((magit "Git 仓库状态、差异与历史")
     (clojure-mode "Clojure / ClojureScript 语法与定义索引")
     (tuareg "OCaml 语法与结构阅读")
+    (merlin "OCaml 光标 enclosing 类型与上下文表达式查询；不接管 Eglot")
     (rainbow-delimiters "括号层级配色")
     (consult "搜索、索引和 xref 候选预览")
     (vertico "纵向 minibuffer 候选界面")

@@ -32,14 +32,15 @@ for package in lock['packages']:
         path.write_bytes(data)
     if hashlib.sha256(path.read_bytes()).hexdigest() != package['sha256']:
         raise SystemExit(f'Checksum mismatch: {path}; remove this cached file and retry')
-    if package.get('format') == 'github-tar.gz':
+    if package.get('format') in ('github-tar.gz', 'upstream-tar'):
         # Repackage the reviewed top-level modules from a verified immutable archive.
-        prefix = f"{package['archive-root']}-{package['revision']}/"
+        prefix = (package["module-prefix"] if package.get("format") == "upstream-tar"
+                  else f"{package['archive-root']}-{package['revision']}/")
         target = CACHE / f"{package['name']}-{package['version']}.tar"
         modules = package['modules']
         if any('/' in name or not name.endswith('.el') for name in modules):
             raise SystemExit('Only top-level Elisp modules are supported')
-        with tarfile.open(path, 'r:gz') as source, tarfile.open(target, 'w') as output:
+        with tarfile.open(path, 'r:*') as source, tarfile.open(target, 'w') as output:
             files = {name: source.extractfile(prefix + name).read() for name in modules}
             deps = ' '.join(f'({name} "{version}")' for name, version in package['dependencies'].items())
             files[f"{package['name']}-pkg.el"] = (

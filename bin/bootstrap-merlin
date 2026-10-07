@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Build a matching Merlin using existing libraries; never mutate an Opam switch."""
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import tarfile
+import tempfile
+import urllib.request
+
+ROOT = Path(__file__).resolve().parent.parent
+PACKAGE = next(p for p in json.loads((ROOT / 'packages.lock.json').read_text())['packages']
+               if p['name'] == 'merlin')
+VERSION = PACKAGE['upstream-version']
+
+def output(*args):
+    return subprocess.check_output(args, text=True).strip()
+
+compiler = output('opam', 'exec', '--', 'ocamlc', '-version')
+library = output('opam', 'list', '--installed', 'merlin-lib', '--columns=version', '--short')
+if not compiler.startswith('5.5.') or library != VERSION:
+    raise SystemExit(f'Requires existing OCaml 5.5 and merlin-lib {VERSION}; found {compiler}, {library}. '
+                     'Install a matching Merlin in your project environment instead. No switch was changed.')
+cache = ROOT / '.local' / 'downloads' / PACKAGE['filename']
+cache.parent.mkdir(parents=True, exist_ok=True)
+if not cache.exists():
+    with urllib.request.urlopen(PACKAGE['url'], timeout=40) as response:
+        data = response.read()
+    if hashlib.sha256(data).hexdigest() != PACKAGE['sha256']:
+        raise SystemExit('Merlin source checksum mismatch')
+    cache.write_bytes(data)
+if hashlib.sha256(cache.read_bytes()).hexdigest() != PACKAGE['sha256']:
+    raise SystemExit('Cached Merlin source checksum mismatch')
+tools = ROOT / '.local' / 'tools'
+source = tools / f'merlin-src-{VERSION}'
+prefix = tools / f'merlin-{VERSION}'
+if not source.exists():
+    tools.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='merlin-source-', dir=tools) as directory:
+        with tarfile.open(cache, 'r:*') as archive:
+            for member in archive.getmembers():
+                parts = Path(member.name).parts
+                if (not parts or parts[0] != f'merlin-{VERSION}' or '..' in parts
+                        or not (member.isfile() or member.isdir())):
+                    raise SystemExit(f'Unexpected Merlin archive member: {member.name}')
+            archive.extractall(directory, filter='data')
+        (Path(directory) / f'merlin-{VERSION}').rename(source)
+for args in [
+    ['opam', 'exec', '--', 'dune', 'build', '-p', 'merlin,dot-merlin-reader', '-j', '2'],
+    ['opam', 'exec', '--', 'dune', 'install', '--prefix', str(prefix), '-p', 'merlin,dot-merlin-reader'],
+]:
+    subprocess.run(args, cwd=source, check=True)
+print(output(str(prefix / 'bin' / 'ocamlmerlin'), '-version'))
+print(f'Installed only in {prefix}; shared switch and pins unchanged.')
