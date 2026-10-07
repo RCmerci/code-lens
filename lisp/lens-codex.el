@@ -67,7 +67,7 @@ initial automatic preselection.  M-RET retains Vertico's raw-input command."
                         "Codex 当前文件问题: ") choices nil nil)))
          (_ (when (string-empty-p (string-trim question))
               (user-error "Code Lens: 问题不能为空；未启动或发送")))
-         (prompt (format "从会话的项目根工作目录读取下面指定的项目内文件，按磁盘已保存版本回答。只回答代码问题；不要修改文件、应用补丁、执行写操作或读取其他文件。\n%s"
+         (prompt (format "从会话的项目根工作目录读取下面指定的项目内文件，按磁盘已保存版本回答。只回答代码问题；不要修改文件。\n%s"
                          (if (member question choices) question
                            (format "当前文件<%s>\n%s" file question)))))
     (prog1 (lens-codex-dispatch context prompt)
