@@ -34,6 +34,7 @@
      ("C-c r t" toggle-truncate-lines "长行截断 / 折行")
      ("C-c r w" other-window "下一个窗口")
      ("M-o" other-window "下一个窗口，同 C-c r w")
+     ("C-<tab>" other-window "全局下一个窗口，同 M-o")
      ("C-c <left>" winner-undo "恢复上一窗口布局")
      ("C-c <right>" winner-redo "恢复下一窗口布局"))
     ("速查与帮助"

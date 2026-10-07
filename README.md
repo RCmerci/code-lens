@@ -56,7 +56,7 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 | `M-.` / `M-,` | 定义 / 返回；也可用 `C-c r .` / `,` |
 | `M-?` / `C-c r r` | xref 引用；是否语义准确取决于后端 |
 | `C-c r s` | 连接 / 重试现有语言服务器 |
-| `M-o` / `C-c r w` | 下一个窗口 |
+| `C-<tab>` / `M-o` / `C-c r w` | 全局下一个窗口（`other-window`） |
 | `C-c ←` / `C-c →` | 恢复上一 / 下一窗口布局 |
 | `C-M-a` / `C-M-e` | 定义开头 / 结尾 |
 | `C-M-f` / `C-M-b` / `C-M-u` | 结构向前 / 向后 / 向外；尤其适合 Clojure |
@@ -64,6 +64,8 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 | `C-c r t` | 切换长行截断 / 折行 |
 | `C-c r e` / `C-x C-q` | 当前代码 buffer 临时解锁 / 再锁定 |
 | `M-g g` / `C-x r SPC a` / `C-x r j a` | 跳到行 / 记录位置 a / 返回位置 a |
+
+`C-<tab>` 全局绑定 `other-window`。两版 Emacs 的标准 `[C-tab]` 事件及 xterm Ctrl-Tab 修饰序列均已验证；普通 Tab 保持原行为。若终端只发送普通 Tab，可使用 `M-o` 切换窗口。
 
 搜索结果中用 `RET` 打开，`M-g n` / `M-g p` 跳到下一 / 上一个命中。`C-x 2` / `C-x 3` 分屏，`C-x 1` 保留一个窗口，`C-x 0` 关闭当前窗口。
 

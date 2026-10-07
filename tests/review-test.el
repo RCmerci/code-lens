@@ -195,7 +195,7 @@
                   (regexp-quote (concat "C-c r " (key-description (vector event)))) text))
          (should (string-match-p (regexp-quote (symbol-name binding)) text))))
      lens-review-map)
-    (dolist (key '("M-." "M-," "M-o" "C-c <left>" "C-c <right>"))
+    (dolist (key '("M-." "M-," "M-o" "C-<tab>" "C-c <left>" "C-c <right>"))
       (should (string-match-p (regexp-quote key) text))
       (should (string-match-p
                (regexp-quote (symbol-name (keymap-lookup (current-global-map) key))) text)))
