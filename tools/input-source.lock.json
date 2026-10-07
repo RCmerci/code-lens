@@ -1,0 +1,9 @@
+{
+  "name": "macism",
+  "version": "3.1.1",
+  "revision": "8d3077bc09e7887c9c0993a1b75b4c7e6b65b6d0",
+  "url": "https://codeload.github.com/laishulu/macism/tar.gz/8d3077bc09e7887c9c0993a1b75b4c7e6b65b6d0",
+  "sha256": "77e8bccf8ac703b1f0fd995342bb9c071be0d4be694235c7c0f8721c901e6ee1",
+  "upstream-files": ["InputSourceManager.swift", "WindowUtils.swift", "LICENSE"],
+  "frontend": "tools/lens-input-source.swift"
+}

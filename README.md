@@ -83,7 +83,7 @@ Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`�
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-merlin" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-merlin" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-input-source" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -213,3 +213,26 @@ Emacs 接口锁定到官方 **Merlin 5.8.1-505** release，接口文件自身标
 验证：`tests/merlin-test.el` 检查真实 `count → int` 重复细节、enclosing 扩缩范围、`add score 5 : int`、表达式未写入文件、Eglot 定义 / 返回 / 引用和解锁后普通输入。`CODE_LENS_MERLIN_ONLY=1 ./bin/check-interactive` 使用独立终端及真实表达式输入；不操作已有用户 Emacs GUI。
 
 官方参考：[Merlin Emacs](https://ocaml.github.io/merlin/editor/emacs/)、[Merlin 5.8.1-505](https://github.com/ocaml/merlin/releases/tag/v5.8.1-505)。
+
+### macOS 系统输入源
+
+前台 macOS GUI Code Lens 的实际选中 buffer 进入 OCaml / Clojure 源码时切英文，进入 `codex-ide-session-mode` 对话时切中文。其他 buffer 保持，包括普通终端、名字碰巧含 Codex 的 buffer、Codex 日志 / 列表 / diff；minibuffer 不增加切换规则。该功能不调用 Emacs 内部 input-method，不以后台 buffer 更新判断前台。
+
+本机 English 为 `com.apple.keylayout.ABC`，唯一中文源为 `com.apple.inputmethod.SCIM.ITABC`（简体拼音）。`lens-input-source-english` / `lens-input-source-chinese` 默认 nil，按系统已启用源自动选择；中文优先当前 / 最近实际使用者，存在多个中文且无法确定时停止并提示配置。可显式设置这两个变量为已有源 ID；不增加或删除系统输入源。
+
+两版 NS Emacs 29.4 / 30.2 没有 MacPort 的 `mac-input-source` / `mac-select-input-source` 函数。`bin/bootstrap-input-source` 校验 `tools/input-source.lock.json` 固定的官方 macism **3.1.1** 源码，将其 Carbon/AppKit 核心与仓库前台 PID 适配编译到 `.local/tools/macism-3.1.1/bin/code-lens-input-source`。不安装额外 Elisp 包，不从个人配置加载源码。适配只读取源 ID / 语言 / 前台 PID，选择前再次验证调用 Emacs 正是前台；不注入按键、不读取用户输入内容、不改系统安全设置。
+
+窗口 / buffer / focus 事件合并 50ms 后异步检查一次；同一选中上下文的普通命令不启动外部进程。检查、选择、系统读回严格串行；过期回调不触发后续切换，最后选择的 buffer 决定目标。工具缺失、失败或读回不符时停止自动请求并提示一次；修复后重新启用 `lens-input-source-mode`。`M-x lens-input-source-mode` 可开关。终端 / batch 因无法证明 GUI 前台所有权，默认不改变全局输入源。
+
+官方 macism 为可靠启用中文，会临时显示约 **3×3 像素、150ms** 的输入窗口；仅本 Emacs 已在前台时才允许选择。这里不编译或调用 CGEvent 按键注入，也不自动申请辅助功能权限；如果系统要求新的隐私权限，应由用户明确批准。
+
+```sh
+./bin/bootstrap-input-source
+CODE_LENS_INPUT_SOURCE_ONLY=1 ./bin/check-interactive
+```
+
+该独立终端检查验证实际窗口 / 按键 hook，系统传输受控。`tests/input-source-test.el` 另覆盖模式分类、当前 / 最近中文、重复事件、过期异步结果、前台拒绝和失败降级。
+
+本机 Emacs **29.4 / 30.2** 各通过 7/7 输入源批量测试、3/3 Merlin 按键与 scratch 内容保护回归、1/1 真实终端窗口测试。两版独立 GUI 实测均通过：OCaml → ABC、实际 Codex 对话模式 → 简体拼音、`M-o` 返回源码 → ABC；8 次快速窗口切换不增加 setter，20 次普通命令和后台对话更新不增加请求，Clojure 保持英文，名字含 Codex 的普通文本 buffer 保持原源。每步使用 Carbon 实际读回，确认前台 PID 与测试 Emacs 匹配并恢复焦点；最后恢复原拼音输入源并退出自建进程，没有申请新隐私权限。详细记录见本地 `docs/test-reports/input-source-delivery-summary.txt`。
+
+官方来源：[macism](https://github.com/laishulu/macism)。

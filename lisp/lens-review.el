@@ -141,6 +141,8 @@
         magit-save-repository-buffers nil))
 (require 'lens-navigation-display)
 (require 'lens-ocaml-outline)
+(require 'lens-input-source)
+(when (eq system-type 'darwin) (lens-input-source-mode 1))
 (require 'lens-help)
 (lens-install-bindings)
 (lens-configure-scratch)

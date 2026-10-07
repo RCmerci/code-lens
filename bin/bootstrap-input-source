@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Compile a locked macism core with Code Lens's foreground guard; no system settings."""
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import tarfile
+import urllib.request
+
+ROOT = Path(__file__).resolve().parent.parent
+lock = json.loads((ROOT / 'tools/input-source.lock.json').read_text())
+cache = ROOT / '.local/downloads' / ('macism-' + lock['revision'] + '.tar.gz')
+cache.parent.mkdir(parents=True, exist_ok=True)
+if not cache.exists():
+    with urllib.request.urlopen(lock['url'], timeout=40) as response:
+        data = response.read()
+    if hashlib.sha256(data).hexdigest() != lock['sha256']:
+        raise SystemExit('macism archive checksum mismatch')
+    cache.write_bytes(data)
+if hashlib.sha256(cache.read_bytes()).hexdigest() != lock['sha256']:
+    raise SystemExit('Cached macism archive checksum mismatch')
+source = ROOT / '.local/tools' / ('macism-' + lock['version']) / 'source'
+source.mkdir(parents=True, exist_ok=True)
+with tarfile.open(cache, 'r:gz') as archive:
+    for name in ['InputSourceManager.swift', 'WindowUtils.swift', 'LICENSE']:
+        (source / name).write_bytes(archive.extractfile('macism-' + lock['revision'] + '/' + name).read())
+prefix = source.parent
+(prefix / 'bin').mkdir(exist_ok=True)
+module_cache = ROOT / '.local/tools/swift-module-cache'
+module_cache.mkdir(parents=True, exist_ok=True)
+program = prefix / 'bin/code-lens-input-source'
+subprocess.run(['xcrun', 'swiftc', '-module-cache-path', str(module_cache),
+                str(source / 'InputSourceManager.swift'), str(source / 'WindowUtils.swift'),
+                str(ROOT / 'tools/lens-input-source.swift'), '-framework', 'Carbon', '-o', str(program)],
+               check=True)
+subprocess.run([str(program), '--version'], check=True)
+print('Installed only in ' + str(prefix) + '; no input source or permission changed.')

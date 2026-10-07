@@ -87,6 +87,8 @@
    "  Pulsar：成功定义 / 返回 / 索引 / 搜索跳转短暂高亮；普通光标移动不闪。\n"
    "  Breadcrumb：顶栏只显示代码层级，无项目 / 文件路径；[文本] 表示近似索引。\n"
    "  OCaml 语义层级含嵌套模块、类型、字段；Clojure namespace · 当前 defn。\n\n"
+   "  系统输入源：进入 OCaml / Clojure 源码切英文；Codex 对话切中文；其他 buffer 保持。\n"
+   "  仅前台 macOS GUI 生效；不使用 Emacs 内部输入法，minibuffer 不新增切换规则。\n\n"
    (lens-source-reading-help-text)
    "\nCodex IDE 当前文件问答\n"
    "  c 使用 Vertico 选择预设或输入自由问题；RET 发送，M-RET 发送输入原文。\n"

@@ -5,13 +5,15 @@
 (load (expand-file-name "tests/navigation-display-test.el" lens-root) nil t)
 (load (expand-file-name "tests/ocaml-outline-test.el" lens-root) nil t)
 (load (expand-file-name "tests/merlin-test.el" lens-root) nil t)
+(load (expand-file-name "tests/input-source-test.el" lens-root) nil t)
 (add-hook
  'emacs-startup-hook
  (lambda ()
    (run-at-time
     0.1 nil
     (lambda ()
-      (let ((selector (cond ((getenv "CODE_LENS_MERLIN_ONLY") '(tag merlin-interactive))
+      (let ((selector (cond ((getenv "CODE_LENS_INPUT_SOURCE_ONLY") '(tag input-source-interactive))
+                            ((getenv "CODE_LENS_MERLIN_ONLY") '(tag merlin-interactive))
                             ((getenv "CODE_LENS_OUTLINE_ONLY") '(tag outline-interactive))
                             ((getenv "CODE_LENS_NAVIGATION_ONLY") '(tag navigation-interactive))
                             (t '(tag interactive))))
