@@ -194,9 +194,9 @@ GUI Code Lens 隐藏图标工具栏与原生窗口标题栏，使用 `tool-bar-m
 
 ### OCaml Merlin 类型查询
 
-OCaml 的 `lens-reading-mode` + 只读状态使用 **`t` → `merlin-type-enclosing`**、**`T` → `merlin-type-expr`**。`t` 查询光标处表达式，随后 `C-↑` / `C-↓`（Emacs 写作 `C-<up>` / `C-<down>`）逐层扩大 / 缩小 enclosing 范围并短暂高亮；在同一位置重复 `t` 增加类型细节，例如 `count` 展开为 `int`。`T` 在 minibuffer 输入表达式，使用当前光标的代码上下文查询，不把表达式插入源文件，不保存文件。Clojure 的 `t` 仍是 Eglot hover 文档，`T` 不绑定；解锁或关闭阅读模式后 `t/T` 恢复正常输入。`o` Outline 开关保持原功能。
+OCaml 的 `lens-reading-mode` + 只读状态使用 **`t` → `merlin-type-enclosing`**、**`T` → `merlin-type-expr`**。`t` 查询光标处表达式，随后 **`]` 扩大 / `[` 缩小** enclosing 范围并短暂高亮。这两个键仅在 Merlin 类型提示临时键图中生效，移动光标等其他命令退出后恢复原来的浏览 / 输入行为。在同一位置重复 `t` 增加类型细节，例如 `count` 展开为 `int`。`T` 在 minibuffer 输入表达式，使用当前光标的代码上下文查询，不把表达式插入源文件，不保存文件。Clojure 的 `t` 仍是 Eglot hover 文档，`T` 不绑定；解锁或关闭阅读模式后 `t/T` 恢复正常输入。`o` Outline 开关保持原功能。
 
-仅加载官方查询实现，**不启用 `merlin-mode`**；不注册 Merlin xref、补全、Imenu、idle 错误提示，关闭保存后自动检查。Eglot 保持现有诊断设置和定义 / 引用 / 返回导航。两个单键直接绑定官方命令，保留原生 enclosing 临时键图与重复查询的 verbosity，不用自制类型解析。针对锁定接口延迟读取外层类型时的 verbosity 参数错误，自有适配仅规范化查询后的参数缓存，保留官方范围、类型结果与临时键图。scratch / `C-c r ?` 从同一份键表和实际 keymap 生成这两项说明，已有笔记不会覆盖。
+仅加载官方查询实现，**不启用 `merlin-mode`**；不注册 Merlin xref、补全、Imenu、idle 错误提示，关闭保存后自动检查。Eglot 保持现有诊断设置和定义 / 引用 / 返回导航。两个单键直接绑定官方命令，沿用原生 enclosing 临时键图与重复查询的 verbosity；仅将临时范围键换为 `]` / `[`，避开 macOS 的 Ctrl-arrow 系统快捷键，不用自制类型解析。针对锁定接口延迟读取外层类型时的 verbosity 参数错误，自有适配仅规范化查询后的参数缓存，保留官方范围、类型结果与临时键图。scratch / `C-c r ?` 从同一份键表和实际 keymap 生成这两项说明，已有笔记不会覆盖。
 
 Emacs 接口锁定到官方 **Merlin 5.8.1-505** release，接口文件自身标注 / package descriptor 为 **3.0**，`bin/bootstrap` 校验官方 archive 的 SHA256 并将 `merlin.el`、`merlin-cap.el`、`merlin-xref.el` 安装到本仓库 `.local/profile/elpa/merlin-3.0/`；不从 Opam share 或个人 Emacs 配置加载 Elisp。
 
@@ -210,7 +210,7 @@ Emacs 接口锁定到官方 **Merlin 5.8.1-505** release，接口文件自身标
 
 该脚本先验证已有 OCaml / merlin-lib 版本，校验同一官方源码 archive，用 `dune build -p merlin,dot-merlin-reader -j 2` 和仓库内 `--prefix` 安装；不会 `opam install`、创建 switch、改变 pins 或构建用户项目。其他项目应在启动 Code Lens 前加载自己的工具环境，或显式指定匹配的 `CODE_LENS_MERLIN`。
 
-验证：`tests/merlin-test.el` 检查真实 `count → int` 重复细节、enclosing 扩缩范围、`add score 5 : int`、表达式未写入文件、Eglot 定义 / 返回 / 引用和解锁后普通输入。`CODE_LENS_MERLIN_ONLY=1 ./bin/check-interactive` 使用独立终端及真实表达式输入；不操作已有用户 Emacs GUI。
+验证：`tests/merlin-test.el` 检查真实 `count → int` 重复细节、`t → ] / [` enclosing 扩缩范围、退出后原方括号键行为、`add score 5 : int`、表达式未写入文件、Eglot 定义 / 返回 / 引用和解锁后普通输入。Emacs 29.4 / 30.2 各通过 5/5 批量检查与 1/1 真实终端测试；记录见本地 `docs/test-reports/merlin-brackets-delivery-summary.txt`。`CODE_LENS_MERLIN_ONLY=1 ./bin/check-interactive` 使用独立终端及真实表达式输入；不操作已有用户 Emacs GUI。
 
 官方参考：[Merlin Emacs](https://ocaml.github.io/merlin/editor/emacs/)、[Merlin 5.8.1-505](https://github.com/ocaml/merlin/releases/tag/v5.8.1-505)。
 

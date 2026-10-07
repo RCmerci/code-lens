@@ -10,6 +10,12 @@
       merlin-allow-sit-for nil
       merlin-command #'lens-merlin-executable
       merlin-configuration-function #'lens-merlin-configuration)
+;; These keys exist only while Merlin's native enclosing map is active.
+;; macOS can intercept Ctrl-arrow before Emacs receives it.
+(keymap-set merlin-type-enclosing-map "]" #'merlin-type-enclosing-go-up)
+(keymap-set merlin-type-enclosing-map "[" #'merlin-type-enclosing-go-down)
+(keymap-set merlin-type-enclosing-map "C-<up>" nil)
+(keymap-set merlin-type-enclosing-map "C-<down>" nil)
 (set-face-attribute 'merlin-type-face nil :inherit 'region)
 
 (defun lens-merlin-executable ()
@@ -79,7 +85,7 @@ Normalize the cached value after the query; leave native ranges and keys intact.
                 (format "  %-3s %s [%s]\n" (car entry) (nth 2 entry)
                         (keymap-lookup lens-merlin-type-keys-mode-map (car entry))))
               lens-merlin-type-shortcuts "")
-   "  C-<up> / C-<down>：t 后逐层扩大 / 缩小 enclosing 范围；范围短暂高亮。\n"
+   "  ] / [：t 后逐层扩大 / 缩小 enclosing 范围；范围短暂高亮，其他命令退出临时键图。\n"
    "  Merlin 仅显式查询类型；Eglot 继续负责导航，不添加 Merlin xref / 补全 / 自动检查。\n"))
 
 (provide 'lens-merlin)
