@@ -143,6 +143,7 @@
 (require 'lens-ocaml-outline)
 (require 'lens-input-source)
 (when (eq system-type 'darwin) (lens-input-source-mode 1))
+(require 'lens-file-keys)
 (require 'lens-help)
 (lens-install-bindings)
 (lens-configure-scratch)

@@ -100,7 +100,12 @@
      (let (sent)
        (cl-letf (((symbol-function 'lens-codex-dispatch)
                   (lambda (context prompt) (setq sent (list context prompt)))))
-         (execute-kbd-macro (vconcat "c" "glossary" (kbd "RET")))
+         (minibuffer-with-setup-hook
+             (:append
+              (lambda ()
+                (should-not (eq (key-binding (kbd "C-j")) 'vertico-lens-file-enter))
+                (should-not (eq (key-binding (kbd "C-l")) 'lens-file-up))))
+           (execute-kbd-macro (vconcat "c" "glossary" (kbd "C-l C-j"))))
          (should sent)
          (should (string-match-p (regexp-quote (file-name-nondirectory file)) (cadr sent)))
          (setq sent nil)

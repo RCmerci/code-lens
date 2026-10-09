@@ -11,6 +11,7 @@
      ("C-c r G" lens-search "传统 grep 结果列表；M-g n / p 移动命中")
      ("C-s" consult-line "当前文件行搜索与预览；RET 跳转，C-g 取消")
      ("C-c r L" consult-line "当前文件行搜索与预览，同 C-s")
+     ("C-x k" lens-source-quit "关闭当前 buffer；保留未保存修改 / 活跃进程确认")
      ("C-x b" consult-buffer "切换 buffer / 最近文件 / 书签，可预览")
      ("C-c r o" occur "列出当前文件匹配行"))
     ("定义与结构导航"
@@ -104,6 +105,9 @@
    "  不安装 CLI、不登录、MCP/context 关闭；解锁后 c 恢复普通输入。\n"
    "\n补全与预览\n"
    "  Vertico：C-n / C-p 选择候选，RET 确认，C-g 取消。\n"
+   "  文件路径补全 C-j：目录如 TAB 插入并继续选择；文件如 RET 确认。\n"
+   "  文件路径补全 C-l：删除路径最后一部分 / 回上级；只编辑输入，不删除文件。\n"
+   "  普通 minibuffer 和 Codex 问题输入保持原 C-j / C-l。\n"
    "  minibuffer 内 C-c C-o：Embark 收集当前候选到独立 buffer。\n"
    "  收集时原 minibuffer 自动退出；列表 n / p 浏览，RET 跳转，q 关闭。\n"
    "  Orderless：用空格分隔多个词，顺序不限；Marginalia 在候选旁显示说明。\n"

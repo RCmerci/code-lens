@@ -73,6 +73,12 @@ CODE_LENS_EMACS='/Applications/Emacs 2.app/Contents/MacOS/Emacs' ./bin/code-lens
 
 ## 补全与预览
 
+`C-x k` 直接关闭当前 buffer，不再询问 buffer 名称；沿用仓库的 `lens-source-quit`，未保存修改仍需 y/n 确认，活跃进程和 `kill-buffer-query-functions` 的保护保留。`M-x kill-buffer` 仍可显式选择其他 buffer。
+
+文件路径补全（例如 `C-x C-f`）中，`C-j` 对目录按 TAB 的方式插入并继续选择，对文件确认打开。没有候选时使用输入原文；已有目录（含根路径和尾斜杠）继续留在 minibuffer，新文件名按 RET 接受。`C-l` 删除输入路径最后一个组成部分：`/a/b/file` → `/a/b/`，`/a/b/` → `/a/`；根 `/` 保持不变，`~/` 展开后回到 home 的上级，单个相对名称清空。即使光标不在末尾，也操作最后一部分；只编辑路径文本，不删除磁盘文件或目录。
+
+这两个键仅在 completion metadata 的 `file` 类别生效，使用继承原 keymap 的局部层；普通 minibuffer、Consult 行搜索与 Codex 问题输入保持原行为。TAB、RET 和 Embark 绑定保持现有含义。实现位于 `lisp/lens-file-keys.el`，仅依赖本 profile 已有的 Emacs/Vertico；文件插入与退出使用公开的 `vertico-insert` / `vertico-exit`，C-j 命令采用 Vertico 命令名前缀以获得输入队列下的候选刷新。
+
 Vertico 是唯一的 minibuffer 候选界面，Fido/Icomplete 已停用。`C-n` / `C-p` 选择候选，`RET` 确认，`C-g` 取消。Orderless 支持空格分隔的多词任意顺序匹配；文件路径同时保留 partial-completion。Marginalia 在命令、文件候选旁显示说明与属性。
 
 Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`：先在项目中搜索 answer，再筛选 review.ml 的结果。搜索按需异步执行，遵守 ignore；候选预览有短暂防抖，可能打开代码 buffer，但继续保持默认只读，Clojure / OCaml buffer 自动连接 Eglot。xref 的结果选择也接入 Consult，语义准确性仍取决于后端。`C-s` 打开 Consult 当前文件行搜索，`C-c r L` 是同一命令的别名；`RET` 跳转到选中行，`C-g` 取消并回到搜索前位置。搜索不会修改正文或只读状态，已有未保存输入会保留。`C-c r o` 保留 occur。
@@ -85,7 +91,7 @@ Consult 搜索用 `#搜索表达式#结果过滤`，例如 `#answer#review.ml`�
 (progn
   (package-initialize)
   (load "modus-themes" nil t)
-  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-merlin" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-input-source" "lens-help" "lens-review"))
+  (dolist (file '("lens-packages" "lens-frame" "lens-lsp" "lens-codex" "lens-merlin" "lens-source-reading" "lens-navigation-display" "ocaml-outline" "lens-ocaml-outline" "lens-input-source" "lens-file-keys" "lens-help" "lens-review"))
     (load (expand-file-name (concat "lisp/" file ".el") lens-root) nil t))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
@@ -238,3 +244,5 @@ CODE_LENS_INPUT_SOURCE_ONLY=1 ./bin/check-interactive
 本机 Emacs **29.4 / 30.2** 各通过 7/7 输入源批量测试、3/3 Merlin 按键与 scratch 内容保护回归、1/1 真实终端窗口测试。两版独立 GUI 实测均通过：OCaml → ABC、实际 Codex 对话模式 → 简体拼音、`M-o` 返回源码 → ABC；8 次快速窗口切换不增加 setter，20 次普通命令和后台对话更新不增加请求，Clojure 保持英文，名字含 Codex 的普通文本 buffer 保持原源。每步使用 Carbon 实际读回，确认前台 PID 与测试 Emacs 匹配并恢复焦点；最后恢复原拼音输入源并退出自建进程，没有申请新隐私权限。详细记录见本地 `docs/test-reports/input-source-delivery-summary.txt`。
 
 官方来源：[macism](https://github.com/laishulu/macism)。
+
+文件键回归：`tests/file-keys-test.el` 覆盖直接关闭、安全 veto、未保存文件/活跃进程拒绝关闭、中文及空格文件名、选择候选、目录后继续选文件、无候选、根路径/尾斜杠/相对路径/home 与中间光标，以及非文件 prompt 作用域。`bin/check` 包含批量项；`CODE_LENS_FILE_KEYS_ONLY=1 ./bin/check-interactive` 在独立终端只执行本组真实按键测试，不抢 GUI。此更新不自动重载已有 GUI 实例；重启 Code Lens，或使用上面的手动重载表达式。
